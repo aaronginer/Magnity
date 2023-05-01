@@ -13,11 +13,12 @@ sf::RenderWindow *mainWindow;
 std::thread test_thread;
 
 
-Path p({{300, 30}, {100, 100}, {500, 500}, {300, 570}, {300, 500}, {200, 500}, {300, 30}, {100, 100}, {500, 500}});
+Spline s({{300, 30}, {100, 100}, {500, 500}, {300, 570}, {300, 500}, {200, 500}});
+//Spline s({{100, 100}, {500, 100}, {500, 500}, {100, 500}, {100, 100}, {500, 100}, {500, 500}});
 
 void animation_loop()
 {
-    int update_rate = 3;
+    int update_rate = 100;
 
     milliseconds time = duration_cast< milliseconds > ( system_clock::now().time_since_epoch() );
     while((*mainWindow).isOpen())
@@ -28,7 +29,7 @@ void animation_loop()
 
         // printf("%ld\n", delta_time.count());
 
-        p.interpolate(delta_time.count()/1000.f);
+        s.interpolate(delta_time.count()/1000.f);
 
         usleep(1000000 / update_rate);
     }
@@ -37,8 +38,8 @@ void animation_loop()
 
 int main()
 {
-    mainWindow = new sf::RenderWindow(sf::VideoMode(600, 600), "SFML works!");
-    (*mainWindow).setFramerateLimit(120);
+    mainWindow = new sf::RenderWindow(sf::VideoMode(1280, 720), "SFML works!");
+    (*mainWindow).setFramerateLimit(165);
 
     test_thread = std::thread(animation_loop);
 
@@ -53,9 +54,10 @@ int main()
 
         (*mainWindow).clear();
 
-        p.drawObject();
-        p.drawControlPoints();
-        p.drawCurve();
+        s.drawObject();
+        s.drawControlPoints();
+        s.drawCurve();
+        // s.printLengths();
 
         (*mainWindow).display();
     }
