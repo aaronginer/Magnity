@@ -1,9 +1,12 @@
 # Compiler and flags
 CC = g++
-CFLAGS = -std=c++11 -Wall -Werror -pedantic
+CFLAGS = -std=c++17 -Wall -Werror -pedantic
 
 # SFML libraries
 SFML_LIBS = -lsfml-graphics -lsfml-window -lsfml-system
+
+# SFML libraries
+TGUI_LIBS = -ltgui
 
 # Directories
 SRC_DIR = src
@@ -31,7 +34,7 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 # Rule for building the executable
 $(TARGET): $(OBJS)
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) $^ -o $@ $(SFML_LIBS)
+	$(CC) $(CFLAGS) $^ -o $@ $(SFML_LIBS) $(TGUI_LIBS)
 
 # Clean rule
 clean:
