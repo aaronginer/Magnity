@@ -47,6 +47,8 @@ class Spline
         bool draw_curve_ = false;
         bool draw_ctrl_and_arc_ = false;
 
+        int easing_option_ = 0;
+
         Spline(std::vector<sf::Vector2f> ctrl_points);
 
         void init();

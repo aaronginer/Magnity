@@ -44,6 +44,9 @@ int main()
     mainWindow = new sf::RenderWindow(sf::VideoMode(1280, 720), "SFML works!");
     (*mainWindow).setFramerateLimit(frames_per_second);
 
+
+    // GUI
+
     tgui::GuiSFML gui(*mainWindow);
     auto text_traversal_speed = tgui::EditBox::create();
     text_traversal_speed->setPosition(230, 10);
@@ -109,6 +112,21 @@ int main()
     draw_ctrl_and_arc_toggle->setPosition(10, 140);
     draw_ctrl_and_arc_toggle->setText("Draw Control Points and Arc-Length Table Samples");
     gui.add(draw_ctrl_and_arc_toggle);
+
+    // Create the ComboBox and add the options to it
+    auto comboBox = tgui::ComboBox::create();
+    comboBox->setPosition(500, 10);
+    comboBox->setSize(200, comboBox->getSize().y);
+    comboBox->setDefaultText("Easing Off");
+    comboBox->addItem("Easing Off");
+    comboBox->addItem("Sin Easing");
+    comboBox->addItem("Cubic Easing");
+
+    comboBox->onItemSelect.connect([&](){
+        s.easing_option_ = comboBox->getSelectedItemIndex();
+    });
+    gui.add(comboBox);
+
 
     test_thread = std::thread(animation_loop);
 

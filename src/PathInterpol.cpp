@@ -95,8 +95,14 @@ void Spline::interpolate(float time_delta)
     double whole, t;
     t = modf(time_, &whole);
 
-    //float t = -(cos(M_PI * t) - 1) / 2; 
-    //t = t < 0.5 ? 4 * t * t * t : 1 - pow(-2 * t + 2, 3) / 2;
+    if (easing_option_ == 1)
+    {
+        t = -(cos(M_PI * t) - 1) / 2; 
+    }
+    else if (easing_option_ == 2)
+    {
+        t = t < 0.5 ? 4 * t * t * t : 1 - pow(-2 * t + 2, 3) / 2;
+    }
     
     std::pair<int, float> interpol = searchForU(total_length_ * t);
     current_pos_ = segments_[interpol.first].getPoint(interpol.second);
