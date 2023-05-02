@@ -1,6 +1,8 @@
 #include "PathInterpol.h"
 #include "cmath"
 
+#define M_PI 3.14159265358979323846
+
 extern sf::RenderWindow* mainWindow;
 
 #define ARC_LENGTH_SAMPLES 30ULL
@@ -64,7 +66,7 @@ Spline::Spline(std::vector<sf::Vector2f> ctrl_points)
 {
     this->ctrl_points_ = ctrl_points;
 
-    ctrl_texture_.loadFromFile("res/control_point.png");
+    ctrl_texture_.loadFromFile("../res/control_point.png");
     for (size_t i = 0; i < this->ctrl_points_.size(); i++)
     {
         sf::Sprite ctrl_sprite;

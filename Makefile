@@ -38,4 +38,4 @@ $(TARGET): $(OBJS)
 
 # Clean rule
 clean:
-	rm -rf $(OBJ_DIR)/* $(BIN_DIR)/*
+	rm -rf $(OBJ_DIR)/* $(BIN_DIR)/magnity
