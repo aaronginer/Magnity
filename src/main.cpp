@@ -167,7 +167,7 @@ int main()
         if (dragging_ctrl_point)
         {
             sf::Vector2f mouse = mainWindow->mapPixelToCoords(sf::Mouse::getPosition(*mainWindow));
-            ctrl_point_to_drag->setPosition(mouse);
+            ctrl_point_to_drag->setPosition(mouse - sf::Vector2f(4, 4));
             s.ctrl_points_[ctrl_point_to_drag_idx] = mouse;
             s.init();
         }
@@ -177,6 +177,7 @@ int main()
         s.drawObject();
         s.drawCurve();
         s.drawControlPoints();
+        s.drawArcSamples();
 
         gui.draw();
         (*mainWindow).display();

@@ -15,8 +15,7 @@ class SplineSegment
         SplineSegment(sf::Vector2f p0, sf::Vector2f p1, sf::Vector2f p2, sf::Vector2f p3);
 
         sf::Vector2f getPoint(float t);
-        void drawControlPoints();
-        void drawCurve();
+        void drawSamples();
         void initArcLengths();
 };
 

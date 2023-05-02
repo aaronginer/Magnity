@@ -47,6 +47,19 @@ void SplineSegment::initArcLengths()
     }
 }
 
+void SplineSegment::drawSamples()
+{
+    for (size_t i = 0; i < ARC_LENGTH_SAMPLES; i++)
+    {
+        sf::Vector2f point = getPoint((float)i/(ARC_LENGTH_SAMPLES-1));
+
+        sf::CircleShape circle(.8f);
+        circle.setFillColor(sf::Color::Yellow);
+        circle.setPosition(point - sf::Vector2f(0.8f, 0.8f));
+        (*mainWindow).draw(circle);
+    }
+}
+
 Spline::Spline(std::vector<sf::Vector2f> ctrl_points)
 {
     this->ctrl_points_ = ctrl_points;
@@ -56,8 +69,8 @@ Spline::Spline(std::vector<sf::Vector2f> ctrl_points)
     {
         sf::Sprite ctrl_sprite;
         ctrl_sprite.setTexture(ctrl_texture_);
-        ctrl_sprite.setScale({0.04f, 0.04f});
-        ctrl_sprite.setPosition(ctrl_points_.at(i));
+        ctrl_sprite.setTextureRect({8, 8, 8, 8});
+        ctrl_sprite.setPosition(ctrl_points_.at(i) - sf::Vector2f(4, 4));
         ctrl_sprites_.push_back(ctrl_sprite);
     }
 
@@ -114,7 +127,7 @@ void Spline::drawObject()
 {
     sf::CircleShape circle(7.0f);
     circle.setFillColor(sf::Color::Red);
-    circle.setPosition(current_pos_);
+    circle.setPosition(current_pos_ - sf::Vector2f(7, 7));
 
     (*mainWindow).draw(circle);
 }
@@ -132,6 +145,11 @@ void Spline::drawControlPoints()
 void Spline::drawArcSamples()
 {
     if (!draw_ctrl_and_arc_) return;
+
+    for (SplineSegment s : segments_)
+    {
+        s.drawSamples();
+    }
 }
 
 #define DRAW_CURVE_SAMPLES_PER_UNIT 5
@@ -147,7 +165,7 @@ void Spline::drawCurve()
 
         sf::CircleShape circle(1.0f);
         circle.setFillColor(sf::Color::Green);
-        circle.setPosition(curve_position);
+        circle.setPosition(curve_position - sf::Vector2f(1, 1));
         (*mainWindow).draw(circle);
     }
 }
