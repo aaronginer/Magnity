@@ -7,7 +7,19 @@
 #include <assert.h>
 #include "PathInterpol.h"
 
+
+#include <iostream>
+#include "Player.h"
+#include "PlayerArea.h"
+#include "Border.h"
+#include "Object.h"
+#include "Magnet.h"
+#include "RigidBody.h"
+
 using namespace std::chrono;
+
+#define WIDTH 1200
+#define HEIGTH 800
 
 sf::RenderWindow *mainWindow;
 
@@ -23,17 +35,20 @@ size_t ctrl_point_to_drag_idx;
 int animation_updates_per_second = 100;
 int frames_per_second = 100;
 
+RigidBody ball(1.0f, 1.0f, 1, 20.0f, 20.0f);
+
 void animation_loop()
 {
-    milliseconds time = duration_cast< milliseconds > ( system_clock::now().time_since_epoch() );
+    float deltaTime = 0.0f;
+    Clock clock;
+
     while((*mainWindow).isOpen())
     {
-        milliseconds c_time = duration_cast< milliseconds > ( system_clock::now().time_since_epoch() );
-        milliseconds delta_time = c_time - time;
-        time = c_time;
+        deltaTime = clock.restart().asSeconds();
 
         // printf("time_delta: %f\n", delta_time.count()/1000.f);
-        s.interpolate(delta_time.count()/1000.f);
+        s.interpolate(deltaTime);
+        ball.RunSimulation(deltaTime);
 
         usleep(1000000 / animation_updates_per_second);
     }
@@ -41,12 +56,11 @@ void animation_loop()
 
 int main()
 {
-    mainWindow = new sf::RenderWindow(sf::VideoMode(1280, 720), "SFML works!");
+    mainWindow = new sf::RenderWindow(sf::VideoMode(WIDTH, HEIGTH), "Magnity!");
     (*mainWindow).setFramerateLimit(frames_per_second);
 
 
     // GUI
-
     tgui::GuiSFML gui(*mainWindow);
     auto text_traversal_speed = tgui::EditBox::create();
     text_traversal_speed->setPosition(230, 10);
@@ -127,11 +141,50 @@ int main()
     });
     gui.add(comboBox);
 
+    // OBJECTS
+    //View
+    // View view(Vector2f(0.0f, 0.0f), Vector2f(512.0f, 512.0f));
+
+    //------------------------------------- Textures -------------------------------------//
+    Texture playerTexture;
+    playerTexture.loadFromFile("res/animation.png");
+
+    Texture playerAreaTexture;
+    playerAreaTexture.loadFromFile("res/player_area.png");
+
+    Texture borderTexture;
+    borderTexture.loadFromFile("res/border.png");
+
+    Texture objectTexture;
+    objectTexture.loadFromFile("res/object.png");
+
+    Texture magnetTexture;
+    magnetTexture.loadFromFile("res/magnet.png");
+
+
+    //------------------------------------- Objects  -------------------------------------//
+
+    PlayerArea player1_area(&playerAreaTexture, *mainWindow, 1);                                    //Player 1 Area
+    PlayerArea player2_area(&playerAreaTexture, *mainWindow, 2);                                    //Player 1 Area
+    Border border_area1(&borderTexture, player1_area.getArea(), *mainWindow, 3, true); //Border player 1 area
+    Border border_area2(&borderTexture, player2_area.getArea(), *mainWindow, 1, true); //Border player 2 area
+    Object object(&objectTexture);                                                                    //Object
+    
+    ball.addToRigidBodies(&ball);
+
+    Magnet magnet1(&magnetTexture, 1);                                                          //Player 1
+    Magnet magnet2(&magnetTexture, 2);                                                          //Player 2
+
 
     test_thread = std::thread(animation_loop);
 
+    float deltaTime = 0.0f;
+    Clock clock;
+
     while ((*mainWindow).isOpen())
     {
+        deltaTime = clock.restart().asSeconds();
+
         sf::Event event;
         while ((*mainWindow).pollEvent(event))
         {
@@ -139,8 +192,7 @@ int main()
             {
                 (*mainWindow).close();
             }
-            
-            if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
+            else if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
             {
                 sf::Vector2f mouse = mainWindow->mapPixelToCoords(sf::Mouse::getPosition(*mainWindow));
                 for (size_t i = 0; i < s.ctrl_sprites_.size(); i++)
@@ -155,8 +207,7 @@ int main()
                     }
                 }       
             }
-
-            if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left)
+            else if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left)
             {
                 dragging_ctrl_point = false;     
             }
@@ -172,6 +223,36 @@ int main()
             s.init();
         }
 
+        //keyboard input player 1
+        if(Keyboard::isKeyPressed(Keyboard::Key::A)) {
+            magnet1.getMagnet().move(-1.f, 0.0);
+        }
+        else if(Keyboard::isKeyPressed(Keyboard::Key::D)) {
+            magnet1.getMagnet().move(0.1f, 0.0);
+        }
+        else if(Keyboard::isKeyPressed(Keyboard::Key::S)) {
+            magnet1.getMagnet().move(0.0, 0.1f);
+        }
+        else if(Keyboard::isKeyPressed(Keyboard::Key::W)) {
+            magnet1.getMagnet().move(0.0, -0.1f);
+        }
+
+        //keyboard input player 2
+        if(Keyboard::isKeyPressed(Keyboard::Key::Left)) {
+            magnet2.getMagnet().move(-0.1f, 0.0);
+        }
+        else if(Keyboard::isKeyPressed(Keyboard::Key::Right)) {
+            magnet2.getMagnet().move(0.1f, 0.0);
+        }
+        else if(Keyboard::isKeyPressed(Keyboard::Key::Down)) {
+            magnet2.getMagnet().move(0.0, 0.1f);
+        }
+        else if(Keyboard::isKeyPressed(Keyboard::Key::Up)) {
+            magnet2.getMagnet().move(0.0, -0.1f);
+        }
+
+        //(*mainWindow).setView(view);
+
         (*mainWindow).clear();
 
         s.drawObject();
@@ -179,7 +260,18 @@ int main()
         s.drawControlPoints();
         s.drawArcSamples();
 
+        ball.DisplayBodies(*mainWindow);
+
         gui.draw();
+
+        player1_area.Draw(*mainWindow);
+        player2_area.Draw(*mainWindow);
+        border_area1.Draw(*mainWindow);
+        border_area2.Draw(*mainWindow);
+        object.Draw(*mainWindow);
+        magnet1.Draw(*mainWindow);
+        magnet2.Draw(*mainWindow);
+
         (*mainWindow).display();
     }
 
