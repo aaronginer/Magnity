@@ -33,10 +33,165 @@ bool dragging_ctrl_point = false;
 sf::Sprite* ctrl_point_to_drag;
 size_t ctrl_point_to_drag_idx;
 
-int animation_updates_per_second = 100;
-int frames_per_second = 100;
+// Global variables
+int animation_update_rate = 100;
+int fps = 60;
+int easing = 0;
+bool gui_visible = true;
 
 RigidBody ball(1.0f, 1.0f, 1, 20.0f, 20.0f);
+
+void createPathInterpolationPanel(tgui::Panel::Ptr panel, sf::RenderWindow& window)
+{
+
+    tgui::Label::Ptr traversalSpeedLabel = tgui::Label::create();
+    traversalSpeedLabel->setText("Traversal Speed:");
+    traversalSpeedLabel->setPosition(220, 10);
+    traversalSpeedLabel->setTextSize(16);
+
+    tgui::Label::Ptr traversalSpeedValueLabel = tgui::Label::create();
+    traversalSpeedValueLabel->setText(std::to_string(s.traversal_speed_));
+    traversalSpeedValueLabel->setPosition(380, 10);
+    traversalSpeedValueLabel->setTextSize(16);
+
+    // Create the traversal speed slider and text field
+    tgui::Slider::Ptr traversalSpeedSlider = tgui::Slider::create();
+    traversalSpeedSlider->setMinimum(0.1f);
+    traversalSpeedSlider->setMaximum(20.0f);
+    traversalSpeedSlider->setStep(0.05f);
+    traversalSpeedSlider->setValue(s.traversal_speed_);
+    traversalSpeedSlider->setSize(200, 20);
+    traversalSpeedSlider->setPosition(10, 10);
+    traversalSpeedSlider->onValueChange.connect([traversalSpeedValueLabel](float value)
+    { 
+        s.traversal_speed_ = value; 
+        traversalSpeedValueLabel->setText(std::to_string(s.traversal_speed_));
+    });
+
+    panel->add(traversalSpeedSlider);
+    panel->add(traversalSpeedLabel);
+    panel->add(traversalSpeedValueLabel);
+
+
+    tgui::Label::Ptr animationUpdateRateLabel = tgui::Label::create();
+    animationUpdateRateLabel->setText("AUR:");
+    animationUpdateRateLabel->setPosition(220, 40);
+    animationUpdateRateLabel->setTextSize(16);
+
+    tgui::Label::Ptr animationUpdateRateValueLabel = tgui::Label::create();
+    animationUpdateRateValueLabel->setText(std::to_string(animation_update_rate));
+    animationUpdateRateValueLabel->setPosition(380, 40);
+    animationUpdateRateValueLabel->setTextSize(16);
+
+    // Create the animation update rate slider and text field
+    tgui::Slider::Ptr animationUpdateRateSlider = tgui::Slider::create();
+    animationUpdateRateSlider->setMinimum(1.0f);
+    animationUpdateRateSlider->setMaximum(500.0f);
+    animationUpdateRateSlider->setStep(1.f);
+    animationUpdateRateSlider->setValue(animation_update_rate);
+    animationUpdateRateSlider->setSize(200, 20);
+    animationUpdateRateSlider->setPosition(10, 40);
+    animationUpdateRateSlider->onValueChange.connect([animationUpdateRateValueLabel](float value)
+    { 
+        animation_update_rate = (int) value;
+        animationUpdateRateValueLabel->setText(std::to_string(animation_update_rate));
+    });
+
+
+    panel->add(animationUpdateRateSlider);
+    panel->add(animationUpdateRateLabel);
+    panel->add(animationUpdateRateValueLabel);
+
+    tgui::Label::Ptr fpsLabel = tgui::Label::create();
+    fpsLabel->setText("FPS:");
+    fpsLabel->setPosition(220, 70);
+    fpsLabel->setTextSize(16);
+
+    tgui::Label::Ptr fpsValueLabel = tgui::Label::create();
+    fpsValueLabel->setText(std::to_string((int) fps));
+    fpsValueLabel->setPosition(380, 70);
+    fpsValueLabel->setTextSize(16);
+
+    // Create the fps slider and text field
+    tgui::Slider::Ptr fpsSlider = tgui::Slider::create();
+    fpsSlider->setMinimum(1.0f);
+    fpsSlider->setMaximum(240.0f);
+    fpsSlider->setStep(1.f);
+    fpsSlider->setValue(fps);
+    fpsSlider->setSize(200, 20);
+    fpsSlider->setPosition(10, 70);
+    fpsSlider->onValueChange.connect([fpsValueLabel](float value)
+    { 
+        fps = (int) value; 
+        (*mainWindow).setFramerateLimit(fps);
+        fpsValueLabel->setText(std::to_string(fps));
+    });
+
+    panel->add(fpsSlider);
+    panel->add(fpsLabel);
+    panel->add(fpsValueLabel);
+
+    // Create the Draw Curve button
+    tgui::Button::Ptr drawCurveButton = tgui::Button::create();
+    drawCurveButton->setText("Draw Curve");
+    drawCurveButton->setSize(200, 30);
+    drawCurveButton->setPosition(10, 100);
+    drawCurveButton->onPress.connect([&]() { s.draw_curve_ = !s.draw_curve_; });
+
+    panel->add(drawCurveButton);
+
+    // Create the Draw Controls button
+    tgui::Button::Ptr drawControlsButton = tgui::Button::create();
+    drawControlsButton->setText("Draw Control Points and Arc-Length Table samples");
+    drawControlsButton->setSize(400, 30);
+    drawControlsButton->setPosition(10, 140);
+    drawControlsButton->onPress.connect([&]() { s.draw_ctrl_and_arc_ = !s.draw_ctrl_and_arc_; });
+
+    panel->add(drawControlsButton);
+
+    // Create the Easing dropdown menu
+    tgui::ComboBox::Ptr easingComboBox = tgui::ComboBox::create();
+    easingComboBox->addItem("Easing Off");
+    easingComboBox->addItem("Sin Easing");
+    easingComboBox->addItem("Cubic Easing");
+    easingComboBox->setSize(200, 20);
+    easingComboBox->setPosition(10, 180);
+    easingComboBox->setDefaultText("Easing Off");
+    easingComboBox->onItemSelect.connect([easingComboBox]{
+        s.easing_option_ = easingComboBox->getSelectedItemIndex();
+    });
+
+    panel->add(easingComboBox);
+
+    sf::Vector2f panelSize(0, 0);
+    for (const auto& widget : panel->getWidgets())
+    {
+        panelSize.x = std::max(panelSize.x, widget->getPosition().x + widget->getSize().x);
+        panelSize.y = std::max(panelSize.y, widget->getPosition().y + widget->getSize().y);
+    }
+    panel->setSize(tgui::Layout2d(panelSize.x, panelSize.y+5));
+
+    // Position the panel widget at the top right of the window with a margin of 10 pixels
+    panel->setPosition(window.getSize().x - panel->getSize().x - 10, 10);
+}
+
+void createToggleButtons(tgui::Panel::Ptr panel, tgui::Gui& gui)
+{
+     // Create the toggle button
+    auto toggleButton = tgui::Button::create();
+    toggleButton->setText("Toggle GUI");
+    toggleButton->setSize(100, 30);
+    toggleButton->setPosition(10, 10);
+
+    // Add the button to the GUI
+    gui.add(toggleButton);
+
+    // Connect the button to the function that will toggle the GUI
+    toggleButton->onClick.connect([&](){
+        gui_visible = !gui_visible;
+        panel->setVisible(gui_visible);
+    });
+}
 
 void animation_loop()
 {
@@ -51,97 +206,28 @@ void animation_loop()
         s.interpolate(deltaTime);
         ball.RunSimulation(deltaTime);
 
-        usleep(1000000 / animation_updates_per_second);
+        usleep(1000000 / animation_update_rate);
     }
 }
 
 int main()
 {
     mainWindow = new sf::RenderWindow(sf::VideoMode(WIDTH, HEIGTH), "Magnity!");
-    (*mainWindow).setFramerateLimit(frames_per_second);
+    (*mainWindow).setFramerateLimit(fps);
     View view(sf::FloatRect(0.f, 0.f, (float) WIDTH, (float) HEIGTH));
     mainWindow->setView(view);
 
     // GUI
     tgui::GuiSFML gui(*mainWindow);
-    auto text_traversal_speed = tgui::EditBox::create();
-    text_traversal_speed->setPosition(230, 10);
-    text_traversal_speed->setSize(200, text_traversal_speed->getSize().y);
-    text_traversal_speed->setText("Traversal Speed: " + std::to_string(s.traversal_speed_));
-    gui.add(text_traversal_speed);
 
-    auto slider_traversal_speed = tgui::Slider::create(0.1f, 20);
-    slider_traversal_speed->setPosition(10, 10);
-    slider_traversal_speed->setSize(200, 10);
-    slider_traversal_speed->setValue(4);
-    slider_traversal_speed->setStep(0.1f);
-    slider_traversal_speed->onValueChange.connect([&](float value) {
-        // lock
-        s.traversal_speed_ = value;
-        text_traversal_speed->setText("Traversal Speed: " + std::to_string(value));
-    });
-    gui.add(slider_traversal_speed);
+    // Create a panel to serve as the background of the GUI
+    tgui::Panel::Ptr panel = tgui::Panel::create();
+    panel->setSize("100%", "100%");
+    panel->getRenderer()->setBackgroundColor(sf::Color(0, 0, 255, 128));
+    gui.add(panel);
 
-    auto text_aups = tgui::EditBox::create();
-    text_aups->setPosition(230, 50);
-    text_aups->setSize(200, text_traversal_speed->getSize().y);
-    text_aups->setText("Animation Update Rate: " + std::to_string(animation_updates_per_second));
-    gui.add(text_aups);
-
-    auto slider_aups = tgui::Slider::create(1, 500);
-    slider_aups->setPosition(10, 50);
-    slider_aups->setSize(200, 10);
-    slider_aups->setStep(1);
-    slider_aups->setValue(animation_updates_per_second);
-    slider_aups->onValueChange.connect([&](float value) {
-        animation_updates_per_second = (int) value;
-        text_aups->setText("Animation Update Rate: " + std::to_string((size_t)value));
-    });
-    gui.add(slider_aups);
-
-    auto text_fps = tgui::EditBox::create();
-    text_fps->setPosition(230, 90);
-    text_fps->setSize(200, text_traversal_speed->getSize().y);
-    text_fps->setText("FPS: " + std::to_string(frames_per_second));
-    gui.add(text_fps);
-
-    auto slider_fps = tgui::Slider::create(1, 500);
-    slider_fps->setPosition(10, 90);
-    slider_fps->setSize(200, 10);
-    slider_fps->setStep(1);
-    slider_fps->setValue(frames_per_second);
-    slider_fps->onValueChange.connect([&](float value) {
-        frames_per_second = (int) value;
-        (*mainWindow).setFramerateLimit(frames_per_second);
-        text_fps->setText("FPS: " + std::to_string((size_t)value));
-    });
-    gui.add(slider_fps);
-
-    auto draw_curve_toggle = tgui::ToggleButton::create();
-    draw_curve_toggle->onClick.connect([&]() { s.draw_curve_ = !s.draw_curve_; });
-    draw_curve_toggle->setPosition(10, 110);
-    draw_curve_toggle->setText("Draw Curve");
-    gui.add(draw_curve_toggle);
-
-    auto draw_ctrl_and_arc_toggle = tgui::ToggleButton::create();
-    draw_ctrl_and_arc_toggle->onClick.connect([&]() { s.draw_ctrl_and_arc_ = !s.draw_ctrl_and_arc_; });
-    draw_ctrl_and_arc_toggle->setPosition(10, 140);
-    draw_ctrl_and_arc_toggle->setText("Draw Control Points and Arc-Length Table Samples");
-    gui.add(draw_ctrl_and_arc_toggle);
-
-    // Create the ComboBox and add the options to it
-    auto comboBox = tgui::ComboBox::create();
-    comboBox->setPosition(500, 10);
-    comboBox->setSize(200, comboBox->getSize().y);
-    comboBox->setDefaultText("Easing Off");
-    comboBox->addItem("Easing Off");
-    comboBox->addItem("Sin Easing");
-    comboBox->addItem("Cubic Easing");
-
-    comboBox->onItemSelect.connect([&](){
-        s.easing_option_ = comboBox->getSelectedItemIndex();
-    });
-    gui.add(comboBox);
+    createPathInterpolationPanel(panel, *mainWindow);
+    createToggleButtons(panel, gui);
 
     // OBJECTS
 
@@ -235,13 +321,13 @@ int main()
             magnet1.getMagnet().move(-1.f, 0.0);
             printf("--------------------------- (%f|%f)\n", magnet1.getPosition().x, magnet1.getPosition().y);
         }
-        else if(Keyboard::isKeyPressed(Keyboard::Key::D)) {
+        if(Keyboard::isKeyPressed(Keyboard::Key::D)) {
             magnet1.getMagnet().move(1.f, 0.0);
         }
-        else if(Keyboard::isKeyPressed(Keyboard::Key::S)) {
+        if(Keyboard::isKeyPressed(Keyboard::Key::S)) {
             magnet1.getMagnet().move(0.0, 1.f);
         }
-        else if(Keyboard::isKeyPressed(Keyboard::Key::W)) {
+        if(Keyboard::isKeyPressed(Keyboard::Key::W)) {
             magnet1.getMagnet().move(0.0, -1.f);
         }
 
@@ -249,21 +335,19 @@ int main()
         if(Keyboard::isKeyPressed(Keyboard::Key::Left)) {
             magnet2.getMagnet().move(-1.f, 0.0);
         }
-        else if(Keyboard::isKeyPressed(Keyboard::Key::Right)) {
+        if(Keyboard::isKeyPressed(Keyboard::Key::Right)) {
             magnet2.getMagnet().move(1.f, 0.0);
         }
-        else if(Keyboard::isKeyPressed(Keyboard::Key::Down)) {
+        if(Keyboard::isKeyPressed(Keyboard::Key::Down)) {
             magnet2.getMagnet().move(0.0, 1.f);
         }
-        else if(Keyboard::isKeyPressed(Keyboard::Key::Up)) {
+        if(Keyboard::isKeyPressed(Keyboard::Key::Up)) {
             magnet2.getMagnet().move(0.0, -1.f);
         }
 
         //(*mainWindow).setView(view);
 
         (*mainWindow).clear();
-
-        
 
         ball.DisplayBodies(*mainWindow);
 
