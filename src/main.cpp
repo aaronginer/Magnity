@@ -189,7 +189,6 @@ void createToggleButtons(tgui::Panel::Ptr panel, tgui::Gui& gui)
     // Connect the button to the function that will toggle the GUI
     toggleButton->onClick.connect([&](){
         gui_visible = !gui_visible;
-        panel->setVisible(gui_visible);
     });
 }
 
@@ -225,6 +224,7 @@ int main()
     panel->setSize("100%", "100%");
     panel->getRenderer()->setBackgroundColor(sf::Color(0, 0, 255, 128));
     gui.add(panel);
+    printf("%p\n", panel.get());
 
     createPathInterpolationPanel(panel, *mainWindow);
     createToggleButtons(panel, gui);
@@ -264,13 +264,8 @@ int main()
 
     test_thread = std::thread(animation_loop);
 
-    float deltaTime = 0.0f;
-    Clock clock;
-
     while ((*mainWindow).isOpen())
     {
-        deltaTime = clock.restart().asSeconds();
-
         sf::Event event;
         while ((*mainWindow).pollEvent(event))
         {
@@ -363,6 +358,8 @@ int main()
         s.drawCurve();
         s.drawControlPoints();
         s.drawArcSamples();
+        
+        panel->setVisible(gui_visible);
         gui.draw();
 
         (*mainWindow).display();
