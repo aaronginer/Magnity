@@ -61,7 +61,6 @@ Border::Border(sf::Texture *texture, int x, int y, float height, float width) {
     border.setSize(Vector2f(height, width));
     border.setPosition(x, y);
     border.setTexture(texture);
-    border.setOrigin(border.getSize() / 2.0f);
     this->fullscreen = false;
     this->xORy = false;
 }
@@ -75,14 +74,5 @@ Vector2f Border::getPosition() {
 }
 
 void Border::Draw(RenderWindow &window) {
-    if(fullscreen) {
-        if(xORy) {
-            border.setSize(Vector2f(window.getSize().x, 10.0f));
-        }
-        else {
-            border.setSize(Vector2f(window.getSize().y, 10.0f));
-        }
-    }
-
     window.draw(border);
 }

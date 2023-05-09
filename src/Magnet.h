@@ -8,13 +8,13 @@ using namespace sf;
 
 class Magnet {
     public:
-        Magnet(Texture* texture, int player);
+        Magnet(Texture* texture, View& view, int player);
         ~Magnet();
 
         void Draw(RenderWindow &window);
         Vector2f getPosition();
 
-        RectangleShape getMagnet();
+        RectangleShape& getMagnet();
 
     private:
         RectangleShape magnet;

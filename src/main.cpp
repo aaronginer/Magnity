@@ -20,6 +20,7 @@ using namespace std::chrono;
 
 #define WIDTH 1200
 #define HEIGTH 800
+const float AR = (float)WIDTH/(float)HEIGTH;
 
 sf::RenderWindow *mainWindow;
 
@@ -58,7 +59,8 @@ int main()
 {
     mainWindow = new sf::RenderWindow(sf::VideoMode(WIDTH, HEIGTH), "Magnity!");
     (*mainWindow).setFramerateLimit(frames_per_second);
-
+    View view(sf::FloatRect(0.f, 0.f, (float) WIDTH, (float) HEIGTH));
+    mainWindow->setView(view);
 
     // GUI
     tgui::GuiSFML gui(*mainWindow);
@@ -142,8 +144,6 @@ int main()
     gui.add(comboBox);
 
     // OBJECTS
-    //View
-    // View view(Vector2f(0.0f, 0.0f), Vector2f(512.0f, 512.0f));
 
     //------------------------------------- Textures -------------------------------------//
     Texture playerTexture;
@@ -164,16 +164,16 @@ int main()
 
     //------------------------------------- Objects  -------------------------------------//
 
-    PlayerArea player1_area(&playerAreaTexture, *mainWindow, 1);                                    //Player 1 Area
-    PlayerArea player2_area(&playerAreaTexture, *mainWindow, 2);                                    //Player 1 Area
-    Border border_area1(&borderTexture, player1_area.getArea(), *mainWindow, 3, true); //Border player 1 area
-    Border border_area2(&borderTexture, player2_area.getArea(), *mainWindow, 1, true); //Border player 2 area
+    PlayerArea player1_area(&playerAreaTexture, view, 1);                                    //Player 1 Area
+    PlayerArea player2_area(&playerAreaTexture, view, 2);                                    //Player 1 Area
+    Border border_area1(&borderTexture, 0, player1_area.getArea().getSize().y, player1_area.getArea().getSize().x, 10.f); //Border player 1 area
+    Border border_area2(&borderTexture, 0, view.getSize().y - player2_area.getArea().getSize().y, player1_area.getArea().getSize().x, 10.f); //Border player 2 area
     Object object(&objectTexture);                                                                    //Object
     
     ball.addToRigidBodies(&ball);
 
-    Magnet magnet1(&magnetTexture, 1);                                                          //Player 1
-    Magnet magnet2(&magnetTexture, 2);                                                          //Player 2
+    Magnet magnet1(&magnetTexture, view, 1);                                                          //Player 1
+    Magnet magnet2(&magnetTexture, view, 2);                                                          //Player 2
 
 
     test_thread = std::thread(animation_loop);
@@ -211,6 +211,13 @@ int main()
             {
                 dragging_ctrl_point = false;     
             }
+            else if (event.type == sf::Event::Resized)
+            {
+                if (event.size.width < 800 || event.size.height < 600)
+                {
+                    mainWindow->setSize(sf::Vector2u(800, 600));
+                }
+            }
 
             gui.handleEvent(event);
         }
@@ -226,43 +233,39 @@ int main()
         //keyboard input player 1
         if(Keyboard::isKeyPressed(Keyboard::Key::A)) {
             magnet1.getMagnet().move(-1.f, 0.0);
+            printf("--------------------------- (%f|%f)\n", magnet1.getPosition().x, magnet1.getPosition().y);
         }
         else if(Keyboard::isKeyPressed(Keyboard::Key::D)) {
-            magnet1.getMagnet().move(0.1f, 0.0);
+            magnet1.getMagnet().move(1.f, 0.0);
         }
         else if(Keyboard::isKeyPressed(Keyboard::Key::S)) {
-            magnet1.getMagnet().move(0.0, 0.1f);
+            magnet1.getMagnet().move(0.0, 1.f);
         }
         else if(Keyboard::isKeyPressed(Keyboard::Key::W)) {
-            magnet1.getMagnet().move(0.0, -0.1f);
+            magnet1.getMagnet().move(0.0, -1.f);
         }
 
         //keyboard input player 2
         if(Keyboard::isKeyPressed(Keyboard::Key::Left)) {
-            magnet2.getMagnet().move(-0.1f, 0.0);
+            magnet2.getMagnet().move(-1.f, 0.0);
         }
         else if(Keyboard::isKeyPressed(Keyboard::Key::Right)) {
-            magnet2.getMagnet().move(0.1f, 0.0);
+            magnet2.getMagnet().move(1.f, 0.0);
         }
         else if(Keyboard::isKeyPressed(Keyboard::Key::Down)) {
-            magnet2.getMagnet().move(0.0, 0.1f);
+            magnet2.getMagnet().move(0.0, 1.f);
         }
         else if(Keyboard::isKeyPressed(Keyboard::Key::Up)) {
-            magnet2.getMagnet().move(0.0, -0.1f);
+            magnet2.getMagnet().move(0.0, -1.f);
         }
 
         //(*mainWindow).setView(view);
 
         (*mainWindow).clear();
 
-        s.drawObject();
-        s.drawCurve();
-        s.drawControlPoints();
-        s.drawArcSamples();
+        
 
         ball.DisplayBodies(*mainWindow);
-
-        gui.draw();
 
         player1_area.Draw(*mainWindow);
         player2_area.Draw(*mainWindow);
@@ -271,6 +274,12 @@ int main()
         object.Draw(*mainWindow);
         magnet1.Draw(*mainWindow);
         magnet2.Draw(*mainWindow);
+        
+        s.drawObject();
+        s.drawCurve();
+        s.drawControlPoints();
+        s.drawArcSamples();
+        gui.draw();
 
         (*mainWindow).display();
     }

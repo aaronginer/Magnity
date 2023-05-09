@@ -8,7 +8,7 @@ using namespace sf;
 class PlayerArea {
 
     public:
-        PlayerArea(Texture* texture, RenderWindow &window, int player);
+        PlayerArea(sf::Texture *texture, View &view, int player);
         ~PlayerArea();
 
         void Draw(RenderWindow &window);

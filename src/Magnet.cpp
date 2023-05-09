@@ -1,15 +1,15 @@
 #include "Magnet.h"
 
-Magnet::Magnet(sf::Texture *texture, int player) {
+Magnet::Magnet(sf::Texture *texture, View& view, int player) {
     this->magnet.setTexture(texture);
-    this->magnet.setSize(Vector2f(40.0f, 50.0f));
+    this->magnet.setSize(Vector2f(40.0f, 40.0f));
     if(player == 1) {
-        this->magnet.setPosition(0.0f, 0.0f);
+        this->magnet.setPosition(40.0f, 40.0f);
     } else {
-        this->magnet.setPosition(0.0f, 400.0f);
+        this->magnet.setPosition(40.0f, view.getSize().y - 40.f);
     }
 
-    // this->magnet.setOrigin(this->magnet.getSize() / 2.0f);
+    this->magnet.setOrigin(sf::Vector2(20.f, 20.f));
     this->player = player;
 }
 
@@ -25,6 +25,6 @@ void Magnet::Draw(sf::RenderWindow &window) {
     window.draw(this->magnet);
 }
 
-RectangleShape Magnet::getMagnet() {
+RectangleShape& Magnet::getMagnet() {
     return this->magnet;
 }
