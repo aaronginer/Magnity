@@ -361,6 +361,7 @@ int main()
         panel->setVisible(gui_visible);
         gui.draw();
 
+        RigidBody::DisplayBodies(*mainWindow);
         (*mainWindow).display();
     }
 

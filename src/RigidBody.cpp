@@ -452,9 +452,7 @@ void RigidBody::RunSimulation(float deltaTime, sf::RenderWindow &window)
 
     ode(x0, xFinal, STATE_SIZE * NBODIES, t-deltaTime, t);
     ArrayToBodies(xFinal);
-    DisplayBodies(window);
     checkForCollisions();
-
 }
 
 //TODO: This is from the sheet
