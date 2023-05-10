@@ -4,13 +4,13 @@
 #include <SFML/Graphics.hpp>
 #include <unistd.h>
 
-#define NUM_RIGID_BODIES 1
+#define NUM_RIGID_BODIES 2
 //array of rigid bodies
 std::vector<RigidBody*>* rigid_bodies = new std::vector<RigidBody*>;
 unsigned int highest_id = 0;
 std::vector<Contact*>* contacts = new std::vector<Contact*>;
-int ncontacts;
-//Contact *contacts;
+int ncontacts = 0;
+int count_contacts = 0;
 
 RigidBody::RigidBody(float mass, float density, unsigned int type, float width, float height, const sf::Texture& texture,
                      bool fixed, float posX, float posY) {
@@ -25,16 +25,10 @@ RigidBody::RigidBody(float mass, float density, unsigned int type, float width, 
     else {
         this->body.setOrigin(width / 2.0f, height / 2.0f);
     }
-
     this->body.setSize({height, width});
     this->body.setTexture(&texture);
     this->world_coord = sf::Vector3f(posX, posY, 0.0f);
     this->body.setPosition(this->world_coord.x, this->world_coord.y);
-    this->leftup = sf::Vector3f(this->body.getPosition().x, this->body.getPosition().y, 0.0f);
-    this->rightbottom = sf::Vector3f(this->body.getPosition().x + width - 1, this->body.getPosition().y + height - 1, 0.0f);
-
-    this->density = density;
-    this->id = highest_id;
     highest_id++;
     this->mass = mass;
     this->Ibody = this->calcIbody();
@@ -43,20 +37,28 @@ RigidBody::RigidBody(float mass, float density, unsigned int type, float width, 
     this->R = Matrix(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
     this->P = sf::Vector3f(0,0,0);
     this->L = sf::Vector3f(0,0,0);
+    this->omega = sf::Vector3f(0,0,0);
     rigid_bodies->push_back(this);
 }
 
 void RigidBody::DisplayBodies(sf::RenderWindow &window) {
     //loop through all bodies and display them
-    //player.Draw(app);
-    printf("-----------------%ld\n", rigid_bodies->size());
-    fflush(stdout);
     for (auto & rigid_bodie : *rigid_bodies) {
         rigid_bodie->world_coord.x = rigid_bodie->world_coord.x + rigid_bodie->x.x;
         rigid_bodie->world_coord.y = rigid_bodie->world_coord.y + rigid_bodie->x.y;
-        rigid_bodie->body.setPosition(rigid_bodie->world_coord.x, rigid_bodie->world_coord.y);
-        rigid_bodie->leftup = {rigid_bodie->body.getPosition().x, rigid_bodie->body.getPosition().y, 0.0f};
-        rigid_bodie->rightbottom = {rigid_bodie->body.getPosition().x + rigid_bodie->width, rigid_bodie->body.getPosition().y + rigid_bodie->height, 0.0f};
+        //check if body has reached border
+        if(rigid_bodie->world_coord.y >= 335.0f) {
+            rigid_bodie->body.setPosition(rigid_bodie->world_coord.x, 335.0f);
+            rigid_bodie->world_coord.y = 335.0f;
+        }
+        else if(rigid_bodie->world_coord.y <= 90.0f) {
+            rigid_bodie->body.setPosition(rigid_bodie->world_coord.x, 90.0f);
+            rigid_bodie->world_coord.y = 90.0f;
+        }
+        else {
+            rigid_bodie->body.setPosition(rigid_bodie->world_coord.x, rigid_bodie->world_coord.y);
+        }
+
         window.draw(rigid_bodie->body);
     }
 }
@@ -89,48 +91,22 @@ double RigidBody::calcMagnitude(sf::Vector3f vec) {
 }
 
 double RigidBody::calcDotProd(sf::Vector3f vec1, sf::Vector3f vec2) {
-    return (vec1.x * vec2.x) + (vec1.y * vec1.y);
+    return (vec1.x * vec2.x) + (vec1.y * vec2.y);
 }
 
 sf::Vector3f RigidBody::calcCrossProd(sf::Vector3f vec1, sf::Vector3f vec2) {
     return {0.0f, 0.0f, (vec1.x * vec2.y) - (vec1.y * vec2.x)};
 }
 
-sf::Vector3f RigidBody::multScalar(sf::Vector3f vec, double scalar) {
-    return {(float)(vec.x * scalar), (float)(vec.y * scalar), 0.0f};
-}
-
-sf::Vector3f RigidBody::negateVector(sf::Vector3f vec) {
-    return {vec.x * -1, vec.y * -1, 0.0f};
-}
-
 sf::Vector3f RigidBody::calcDivScalar(sf::Vector3f vec, double scalar) {
     return {(float)(vec.x / scalar), (float)(vec.y / scalar),(float)(vec.z / scalar)};
 }
 
-double RigidBody::calcInertia(sf::Vector3f point_force, sf::Vector3f force) {
-    if(this->type == 1) //is rectangle
-    {
-        return (this->mass * ((this->height * this->height) + (this->width * this->width))) / 12;
-    }
-    else //TODO: is circle
-    {
-        return (this->mass * 2 * ((this->radius * this->radius))) / 5;
-    }
-}
-
-double RigidBody::calcTau(sf::Vector3f point_force, sf::Vector3f force) {
-    return (point_force.x * force.x) - (point_force.y * force.y);
-}
-
 void RigidBody::StateToArray(RigidBody *rb, double *y) {
-    *y++ = rb->x.x; //x component of position
-    *y++ = rb->x.y; //y component of position
-    *y++ = rb->x.z; //z component of position
+    *y++ = rb->x.x;
+    *y++ = rb->x.y;
+    *y++ = rb->x.z;
 
-    //Assume that a quaternion is represented in
-    //terms of elements 'r' for the real part
-    //and 'i', 'j' and 'k' for the vector part
     *y++ = rb->q.r;
     *y++ = rb->q.i;
     *y++ = rb->q.j;
@@ -146,12 +122,10 @@ void RigidBody::StateToArray(RigidBody *rb, double *y) {
 }
 
 void RigidBody::ArrayToState(RigidBody *rb, double *y) {
-    //std::cout << "ArrayToState" << std::endl;
+
     rb->x.x = (float)*y++;
     rb->x.y = (float)*y++;
     rb->x.z = (float)*y++;
-
-    //std::cout << "Center of mass: X " << rb->x.x << " Y " << rb->x.y << " Z: " << rb->x.z << std::endl;
 
     //Assume that a quaternion is represented in
     //terms of elements 'r' for the real part
@@ -172,6 +146,8 @@ void RigidBody::ArrayToState(RigidBody *rb, double *y) {
     //Compute auxiliary variables
     rb->v = calcDivScalar(rb->P, rb->mass);
     rb->R = QuaternionToMatrix(normalizeQuant(rb->q));
+
+
     rb->Iinv = calcMatrixMult(calcMatrixMult(rb->R, rb->Ibodyinv), calcTransponseMatrix(rb->R));
     rb->omega = calcMatrixMult(rb->Iinv, rb->L);
 }
@@ -220,46 +196,50 @@ void RigidBody::DdtStateToArray(RigidBody *rb, double *xdot) {
     *xdot++ = rb->torque.z;
 }
 
-Matrix RigidBody::Star(sf::Vector3f vec) {
-    return {0.0f, (vec.z * -1.0f), vec.y, vec.z, 0.0f, (vec.x * -1.0f), (vec.y * -1.0f), vec.x, 0.0f};
-}
-
 Matrix RigidBody::calcTransponseMatrix(Matrix matrix) {
     return Matrix(matrix.aa, matrix.ba, matrix.ca, matrix.ab, matrix.bb, matrix.cb, matrix.ac, matrix.bc, matrix.cc);
 }
 
 void RigidBody::ComputeForceAndTorque(double t, RigidBody *rb) {
-    if(rb->fixed) {
-        rb->force = sf::Vector3f(0.0f, -1.0f, 0.0f);
-        rb->torque = sf::Vector3f(0.0f, 0.0f, 0.0f);
+    if(rb->type == 1) {
+        rb->force = sf::Vector3f(rb->force.x, -9.81f * rb->mass, rb->force.z);
+        std::cout << "Force  X: " << rb->force.x << " Y: " << rb->force.y << std::endl;
     }
     else {
-        //store torque in rb->torque
-        //store sum of forces in rb->force
-        //TODO: function that checks where magnets are and compute force that they have on object
-        //TODO: add all forces together!!
-        //Total force F(t) = Sum of all forces Fi(t)
-        //Total external torque = Sum of( (ri(t) - x(t)) x Fi(t) ) -> volume times total force
-        //Gravity = 9.81f * mass
-        rb->force = sf::Vector3f(0.0f, 9.81f * rb->mass, 0.0f);
-
-        sf::Vector3f distanceToCoM = sf::Vector3f(rb->width / 2.0f, rb->height / 2.0f, 0.0f);
-        //torque = r.x * f.y - r.y * f.x;
-        rb->torque = calcCrossProd(distanceToCoM, rb->force);
-        if(ncontacts != 0) {
-            std::cout << "We have a collision!" << std::endl;
-            //TODO: loop through contacts
-            //int n ;
-            //std::cin >> n;
-            //contacts->at(0)->FindAllCollisions(reinterpret_cast<Contact *>(contacts), ncontacts);
-            //contacts->at(0)->computeContactForces(reinterpret_cast<Contact *>(contacts), ncontacts, t);
-            contacts->at(0)->DetectAndResolveCollision(*contacts->at(0));
-        }
+        rb->force = sf::Vector3f(rb->force.x, 9.81f * rb->mass, rb->force.z);
     }
+    //store torque in rb->torque
+    //store sum of forces in rb->force
+    //TODO: function that checks where magnets are and compute force that they have on object
+    //TODO: add all forces together!!
+    //Total force F(t) = Sum of all forces Fi(t)
+    //Total external torque = Sum of( (ri(t) - x(t)) x Fi(t) ) -> volume times total force
+    //Gravity = 9.81f * mass
+
+    sf::Vector3f distanceToCoM = sf::Vector3f(rb->width / 2.0f, rb->height / 2.0f, 0.0f);
+    //torque = r.x * f.y - r.y * f.x;
+    rb->torque = calcCrossProd(distanceToCoM, rb->force);
+    if(ncontacts != 0) {
+        //TODO: loop through contacts
+        contacts->at(0)->DetectAndResolveCollision(*contacts->at(0));
+
+        /*std::cout << "Object A  L    X: " << contacts->at(0)->a->L.x << " Y: " << contacts->at(0)->a->L.y << std::endl;
+        std::cout << "Object B  L    X: " << contacts->at(0)->b->L.x << " Y: " << contacts->at(0)->b->L.y << std::endl;
+        std::cout << "Object A  P    X: " << contacts->at(0)->a->P.x << " Y: " << contacts->at(0)->a->P.y << std::endl;
+        std::cout << "Object B  P    X: " << contacts->at(0)->b->P.x << " Y: " << contacts->at(0)->b->P.y << std::endl;
+        std::cout << "Object A  Force    X: " << contacts->at(0)->a->force.x << " Y: " << contacts->at(0)->a->force.y << std::endl;
+        std::cout << "Object B  Force    X: " << contacts->at(0)->b->force.x << " Y: " << contacts->at(0)->b->force.y << std::endl;*/
+        ncontacts = 0;
+        contacts->clear();
+    }
+
 }
 
 Quaternion RigidBody::normalizeQuant(Quaternion quaternion) {
     double length = calcMagnitude(sf::Vector3f(quaternion.i, quaternion.j, quaternion.k));
+    if(length == 0) {
+        return {0.0f, 0.0f, 0.0f, 0.0f};
+    }
     sf::Vector3f vec = calcDivScalar(sf::Vector3f(quaternion.i, quaternion.j, quaternion.k), length);
     return {quaternion.r, vec.x, vec.y, vec.z};
 }
@@ -275,70 +255,6 @@ Matrix RigidBody::QuaternionToMatrix(Quaternion quaternion) {
     double cb = (2 * quaternion.j * quaternion.k) + (2 * quaternion.r * quaternion.i);
     double cc = 1 - (2 * (quaternion.i * quaternion.i)) - (2 * (quaternion.j * quaternion.j));
     return {aa, ab, ac, ba, bb, bc, ca, cb, cc};
-}
-
-Quaternion RigidBody::matrixToQuaternion(Matrix matrix) {
-    Quaternion q;
-    double tr, s;
-
-    tr = matrix.aa + matrix.bb + matrix.cc;
-
-    if(tr >= 0) {
-        s = std::sqrt(tr + 1);
-        q.r = 0.5f * s;
-        s = 0.5f / s;
-        q.i = (matrix.cb - matrix.bc) * s;
-        q.j = (matrix.ac - matrix.ca) * s;
-        q.k = (matrix.ba - matrix.ab) * s;
-    }
-    else {
-        int i = 0;
-
-        if(matrix.bb > matrix.aa) {
-            i = 1;
-        }
-
-        if(i == 0) {
-            if(matrix.cc > matrix.aa) {
-                i = 2;
-            }
-        } else {
-            if (matrix.cc > matrix.bb) {
-                i = 2;
-            }
-        }
-
-        switch (i) {
-            case 0:
-                s = std::sqrt((matrix.aa - (matrix.bb + matrix.cc)) + 1);
-                q.i = 0.5f * s;
-                s = 0.5f / s;
-                q.j = (matrix.ab + matrix.ba) * s;
-                q.k = (matrix.ca + matrix.ac) * s;
-                q.r = (matrix.cb - matrix.bc) * s;
-                break;
-            case 1:
-                s = std::sqrt((matrix.bb - (matrix.cc + matrix.aa)) + 1);
-                q.j = 0.5f * s;
-                s = 0.5f / s;
-                q.k = (matrix.bc + matrix.cb) * s;
-                q.i = (matrix.ab + matrix.ba) * s;
-                q.r = (matrix.ac - matrix.ca) * s;
-                break;
-            case 2:
-                s = std::sqrt((matrix.cc - (matrix.aa + matrix.bb)) + 1);
-                q.k = 0.5f * s;
-                s = 0.5f / s;
-                q.i = (matrix.ca + matrix.ac) * s;
-                q.j = (matrix.bc + matrix.cb) * s;
-                q.r = (matrix.ba - matrix.ab) * s;
-                break;
-            default:
-                break;
-        }
-    }
-
-    return q;
 }
 
 Quaternion RigidBody::calcQuatMult(Quaternion q1, Quaternion q2) {
@@ -371,10 +287,9 @@ Matrix RigidBody::calcIbody() const {
         //take inetia tensor formular for blocks - since its only 2D - z = 0
         return {(this->height * this->height) * this->mass * (1.0f/12.0f), 0.0f, 0.0f, 0.0f,
                 (this->width * this->width) * this->mass * (1.0f/12.0f), 0.0f, 0.0f, 0.0f,
-                              ((this->width * this->width)+(this->height * this->height)) * this->mass * (1.0f / 12.0f)};
+                ((this->width * this->width)+(this->height * this->height)) * this->mass * (1.0f / 12.0f)};
     }
     else {
-        //TODO: do this for circle take inetia tensor formular for blocks - since its only 2D - z = 0 -> it his correct?
         return {(this->radius * this->radius) * (this->mass) * (2.0f / 5.0f), 0.0f, 0.0f, 0.0f,
                 (this->radius * this->radius) * (this->mass) * (2.0f / 5.0f), 0.0f, 0.0f, 0.0f,
                 (this->radius * this->radius) * (this->mass) * (2.0f / 5.0f)};
@@ -398,16 +313,16 @@ Matrix RigidBody::calcIinversebody() {
     else {
         Matrix T = calcTransponseMatrix(this->Ibody);
         Matrix tmp = Matrix(
-                    (this->Ibody.bb * this->Ibody.cc) - (this->Ibody.bc * this->Ibody.cb),
-                    (this->Ibody.ba * this->Ibody.cc) - (this->Ibody.bc * this->Ibody.ca),
-                    (this->Ibody.ba * this->Ibody.cb) - (this->Ibody.bb * this->Ibody.ca),
-                    (this->Ibody.ab * this->Ibody.cc) - (this->Ibody.ac * this->Ibody.cb),
-                    (this->Ibody.aa * this->Ibody.cc) - (this->Ibody.ac * this->Ibody.ca),
-                    (this->Ibody.aa * this->Ibody.cb) - (this->Ibody.ab * this->Ibody.ca),
-                    (this->Ibody.ab * this->Ibody.bc) - (this->Ibody.ac * this->Ibody.bb),
-                    (this->Ibody.aa * this->Ibody.bc) - (this->Ibody.ac * this->Ibody.ba),
-                    (this->Ibody.aa * this->Ibody.bb) - (this->Ibody.ab * this->Ibody.ba)
-                );
+                (this->Ibody.bb * this->Ibody.cc) - (this->Ibody.bc * this->Ibody.cb),
+                (this->Ibody.ba * this->Ibody.cc) - (this->Ibody.bc * this->Ibody.ca),
+                (this->Ibody.ba * this->Ibody.cb) - (this->Ibody.bb * this->Ibody.ca),
+                (this->Ibody.ab * this->Ibody.cc) - (this->Ibody.ac * this->Ibody.cb),
+                (this->Ibody.aa * this->Ibody.cc) - (this->Ibody.ac * this->Ibody.ca),
+                (this->Ibody.aa * this->Ibody.cb) - (this->Ibody.ab * this->Ibody.ca),
+                (this->Ibody.ab * this->Ibody.bc) - (this->Ibody.ac * this->Ibody.bb),
+                (this->Ibody.aa * this->Ibody.bc) - (this->Ibody.ac * this->Ibody.ba),
+                (this->Ibody.aa * this->Ibody.bb) - (this->Ibody.ab * this->Ibody.ba)
+        );
 
         Matrix tmp1 = Matrix(1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f);
         Matrix adj = calcMatrixMult(tmp, tmp1);
@@ -417,25 +332,8 @@ Matrix RigidBody::calcIinversebody() {
         }
         else {
             return {adj.aa * (1/det), adj.ab * (1/det), adj.ac * (1/det), adj.ba * (1/det), adj.bb * (1/det),
-                          adj.bc * (1/det), adj.ca * (1/det), adj.cb * (1/det), adj.cc * (1/det)};
+                    adj.bc * (1/det), adj.ca * (1/det), adj.cb * (1/det), adj.cc * (1/det)};
         }
-        double ct = 1.0f / det;
-        std::cout << "Ibody^-1" << std::endl;
-        std::cout << "| " << ct * this->Ibody.aa << " " << ct * this->Ibody.ab << " " << ct * this->Ibody.ac << " |" << std::endl;
-        std::cout << "| " << ct * this->Ibody.ba << " " << ct * this->Ibody.bb << " " << ct * this->Ibody.bc << " |" << std::endl;
-        std::cout << "| " << ct * this->Ibody.ca << " " << ct * this->Ibody.cb << " " << ct * this->Ibody.cc << " |" << std::endl;
-        return {
-                ct * this->Ibody.aa,
-                ct * this->Ibody.ab,
-                ct * this->Ibody.ac,
-                ct * this->Ibody.ba,
-                ct * this->Ibody.bb,
-                ct * this->Ibody.bc,
-                ct * this->Ibody.ca,
-                ct * this->Ibody.cb,
-                ct * this->Ibody.cc,
-        };
-
     }
 }
 
@@ -469,26 +367,27 @@ typedef void (*DerivFunc)(double t, double x[], double xdot[]);
 //ode can call dxdt as often as it likes
 void RigidBody::ode(double x0[], double xEnd[], int len, double t0, double t1) {
 
-    double h = t1 - t0;
+    double timestep = t1 - t0;
     double x_half[len], v_half[len];
 
     // Compute initial velocity
     double v0[len], k1[len];
     rigid_bodies->at(0)->Dxdt(t0, x0, k1);
     for (int i = 0; i < len; i++) {
-        v0[i] = x0[i] + 0.5*h*k1[i];
+        v0[i] = x0[i] + 0.5 * timestep * k1[i];
     }
 
-    // Update position and velocity using Verlet integration
+    // Update position and velocity
     for (int i = 0; i < len; i++) {
-        x_half[i] = x0[i] + h*v0[i];
+        x_half[i] = x0[i] + timestep * v0[i];
     }
     rigid_bodies->at(0)->Dxdt(t1, x_half, k1);
+
     for (int i = 0; i < len; i++) {
-        v_half[i] = v0[i] + 0.5*h*k1[i];
+        v_half[i] = v0[i] + 0.5 * timestep * k1[i];
     }
     for (int i = 0; i < len; i++) {
-        xEnd[i] = x_half[i] + h*v_half[i];
+        xEnd[i] = x_half[i] + timestep * v_half[i];
     }
 }
 
@@ -497,89 +396,52 @@ sf::Vector3f RigidBody::normalizeVector(sf::Vector3f vec) {
         return {0.0f, 0.0f, 0.0f};
     }
 
-    return {(float)(vec.x / calcMagnitude(vec)), (float)(vec.y / calcMagnitude(vec)),(float)(vec.y / calcMagnitude(vec))};
-}
-
-bool RigidBody::isPointOnVector(sf::Vector3f P, sf::Vector3f v, sf::Vector3f originV)
-{
-    sf::Vector3f diff = P - originV;
-    double dot_product = calcDotProd(diff, normalizeVector(v));
-    return (dot_product >= 0.0f && dot_product <= calcMagnitude(v));
+    return {(float)(vec.x / calcMagnitude(vec)), (float)(vec.y / calcMagnitude(vec)),(float)(vec.z / calcMagnitude(vec))};
 }
 
 void RigidBody::checkForCollisions() {
     //go through all objects
-    for(int i = 0;  i < NBODIES; i++) {
+    //for(int i = 0;  i < NBODIES; i++) {
+    //calculate bounding box length of object
+    double umfang = 0.0f;
+    if(rigid_bodies->at(0)->type == 0) {
+        umfang = 2 * M_PI * rigid_bodies->at(0)->radius;
+    }
 
-        //calculate bounding box length of object
-        double umfang = 0.0f;
-        if(rigid_bodies->at(i)->type == 0) {
-           umfang = 2 * M_PI * rigid_bodies->at(i)->radius;
-        }
+    //send out vectors (rays) out from the center of mass and check
+    //if it intersects with another object
+    int numberPoints = round(umfang * 1.5f); //we want to check every 0.5 steps on the circle
+    for(double j = 0; j < numberPoints; j++) {
+        float angle = 0.5f * j;
+        float x = rigid_bodies->at(0)->radius * std::cos(angle);
+        float y = rigid_bodies->at(0)->radius * std::sin(angle);
 
-        //send out vectors (rays) out from the center of mass and check
-        //if it intersects with another object
-        int numberPoints = round(umfang * 1.5f); //we want to check every 0.5 steps on the circle
-        for(double j = 0; j < numberPoints; j++) {
-            float angle = 0.5f * j;
-            float x = rigid_bodies->at(i)->radius * std::cos(angle);
-            float y = rigid_bodies->at(i)->radius * std::sin(angle);
+        //new point where the vector is pointing to
+        //add some epsilon to it
+        sf::Vector3f newpoint = sf::Vector3f(x + rigid_bodies->at(0)->world_coord.x + 5,
+                                             y + rigid_bodies->at(0)->world_coord.y + 5, 0.0f);
 
-            //new point where the vector is pointing to
-            //add some epsilon to it
-            sf::Vector3f newpoint = sf::Vector3f(x + rigid_bodies->at(i)->world_coord.x + 5,
-                                                 y + rigid_bodies->at(i)->world_coord.y + 5, 0.0f);
+        //TODO: now loop through all other objects and check if object lies on vector
+        //for now use Border
+        //sf::Vector3f border_com = {400.0f, 350.0f, 0.0f};
+        //loop through upper side of border and check if there is intersection
+        //check if this point is somewhere near calculated other point + in our case 5 because height of border = 5
+        sf::Vector3f vector = newpoint - rigid_bodies->at(0)->world_coord;
+        sf::Vector3f zToStart = rigid_bodies->at(0)->world_coord - rigid_bodies->at(1)->world_coord;
+        float dotProduct = vector.x * zToStart.x + vector.y * zToStart.y;
 
-            //TODO: now loop through all other objects and check if object lies on vector
-            //for now use Border
-            sf::Vector3f border_com = {400.0f, 350.0f, 0.0f};
-            //loop through upper side of border and check if there is intersection
-            //check if this point is somewhere near calculated other point + in our case 5 because height of border = 5
-            sf::Vector3f vector = newpoint - rigid_bodies->at(i)->world_coord;
-            sf::Vector3f zToStart = rigid_bodies->at(i)->world_coord - border_com;
-            float dotProduct = vector.x * zToStart.x + vector.y * zToStart.y;
+        if(newpoint.y >= ((rigid_bodies->at(1)->world_coord.y - rigid_bodies->at(1)->radius)) && zToStart.y <= 5.0f && zToStart.y >= -5.0f) {
+            sf::Vector3f n = sf::Vector3f(0.0f, 1.0f, 0.0f);
+            sf::Vector3f p = sf::Vector3f(rigid_bodies->at(1)->world_coord.x, newpoint.y - rigid_bodies->at(0)->radius, 0.0f); //world-space vertex location
 
-            if(newpoint.y >= (border_com.y)) {
-                std::cout << "We have contact!" << std::endl;
-                sf::Vector3f n = sf::Vector3f(0.0f, -1.0f, 0.0f);
-                sf::Vector3f p = sf::Vector3f(border_com.x, newpoint.y, 0.0f); //world-space vertex location
-                std::cout << "Touching point   X: " << p.x << " Y: " << p.y << std::endl;
-                std::cout << "Coord Body1  X: " << rigid_bodies->at(i)->world_coord.x << " Y: " << rigid_bodies->at(i)->world_coord.y << std::endl;
-                std::cout << "Coord Body2  X: " << rigid_bodies->at(1)->world_coord.x << " Y: " << rigid_bodies->at(1)->world_coord.y << std::endl;
-                Contact *newcontact = new Contact(rigid_bodies->at(i), rigid_bodies->at(1), n, p);
-                contacts->push_back(newcontact);
-                ncontacts++;
-                rigid_bodies->at(i)->x.x = 0.0f;
-                rigid_bodies->at(i)->x.y = 0.0f;
-                return;
-            }
+            Contact *newcontact = new Contact(rigid_bodies->at(0), rigid_bodies->at(1), n, p);
+            contacts->push_back(newcontact);
+            ncontacts++;
+            count_contacts++;
+            rigid_bodies->at(0)->x.x = 0.0f;
+            rigid_bodies->at(0)->x.y = 0.0f;
+            return;
         }
     }
+    //}
 }
-
-float RigidBody::GetMomentOfInertia() {
-    float a = this->width / 2.0f;
-    float b = this->height / 2.0f;;
-    float c = 0.0f;
-    return (1.0f / 12.0f) * mass *
-           (b * b + c * c) + (a * a + b * b) + (a * a + c * c);
-}
-
-float RigidBody::max(float x, float x1) {
-    if(x >= x1) {
-        return x;
-    }
-    else {
-        return x1;
-    }
-}
-
-float RigidBody::min(float x, float x1) {
-    if(x <= x1) {
-        return x;
-    }
-    else {
-        return x1;
-    }
-}
-

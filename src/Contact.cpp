@@ -1,7 +1,3 @@
-//
-// Created by Laura on 07.05.2023.
-//
-
 #include <iostream>
 #include "Contact.h"
 

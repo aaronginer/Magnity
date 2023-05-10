@@ -1,6 +1,8 @@
-//
-// Created by Laura on 07.05.2023.
-//
+///////////////////////////////////////////////////////////////////////////////////////
+//  1d. Rigid-Body Dynamics                                                         //
+//  Mathematical Concepts were taken from the lecture slides, as well as            //
+//  the script "Physically Based Modeling by David Baraff from TeachCenter          //
+///////////////////////////////////////////////////////////////////////////////////////
 
 #ifndef MAGNITY_CONTACT_H
 #define MAGNITY_CONTACT_H
@@ -21,12 +23,12 @@ public:
     void computeContactForces(Contact contacts[], int ncontacts, double t);
     sf::Vector3f computeNdot(Contact *c); //return derivative of the normal vector
     double compute_aij(Contact ci, Contact cj);
-    bool colliding(Contact *c); //return true if bodies are colliding - set THRESHOLD
-    void collision(Contact *c, double epsilon); //loop through all contact points
-    void FindAllCollisions(Contact contacts[], int ncontacts);
+    bool colliding(Contact& c); //return true if bodies are colliding - set THRESHOLD
+    void collision(Contact& c, double epsilon); //loop through all contact points
+    void FindAllCollisions(Contact& contact, int ncontacts);
     void compute_a_matrix(Contact contacts[], int ncontacts, std::vector<std::vector<double>> &a);
     void compute_b_vector(Contact contacts[], int ncontacts, std::vector<double> &b);
-    sf::Vector3f pt_velocity(RigidBody *body, sf::Vector3f p);
+    sf::Vector3f pt_velocity(RigidBody& body, sf::Vector3f& p);
     void DetectAndResolveCollision(Contact& contact);
     sf::Vector3f CalculateImpulse(Contact& contact);
     void ApplyImpulse(RigidBody &body, const sf::Vector3f & impulse, Contact& contact);
