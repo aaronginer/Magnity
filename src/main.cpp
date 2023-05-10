@@ -39,8 +39,6 @@ int fps = 60;
 int easing = 0;
 bool gui_visible = true;
 
-RigidBody* ball_ptr;
-
 
 void createPathInterpolationPanel(tgui::Panel::Ptr panel, sf::RenderWindow& window)
 {
@@ -225,7 +223,6 @@ int main()
     panel->setSize("100%", "100%");
     panel->getRenderer()->setBackgroundColor(sf::Color(0, 0, 255, 128));
     gui.add(panel);
-    printf("%p\n", panel.get());
 
     createPathInterpolationPanel(panel, *mainWindow);
     createToggleButtons(panel, gui);
@@ -245,6 +242,9 @@ int main()
     Texture objectTexture;
     objectTexture.loadFromFile("res/object.png");
 
+    Texture objectTexture2;
+    objectTexture2.loadFromFile("res/object2.png");
+
     Texture magnetTexture;
     magnetTexture.loadFromFile("res/magnet.png");
 
@@ -255,9 +255,12 @@ int main()
     PlayerArea player2_area(&playerAreaTexture, view, 2);                                    //Player 1 Area
     Border border_area1(&borderTexture, 0, player1_area.getArea().getSize().y, player1_area.getArea().getSize().x, 10.f); //Border player 1 area
     Border border_area2(&borderTexture, 0, view.getSize().y - player2_area.getArea().getSize().y, player1_area.getArea().getSize().x, 10.f); //Border player 2 area
-    Object object(&objectTexture);    
-    RigidBody ball(1.0f, 1.0f, 1, 20.0f, 20.0f, objectTexture, false, view.getSize().x/2, view.getSize().y/2);                                                      //Object
-    ball_ptr = &ball;
+
+    RigidBody ball(100.0f, 2.5f, 0, 20.0f, 20.0f, objectTexture, false,
+                   206.0f, 206.0f);
+    RigidBody ball2(100.0f, 2.5f, 1, 20.0f, 20.0f, objectTexture2, false,
+                   300.0f, 306.0f);
+
 
     Magnet magnet1(&magnetTexture, view, 1);                                                          //Player 1
     Magnet magnet2(&magnetTexture, view, 2);                                                          //Player 2
@@ -341,15 +344,12 @@ int main()
             magnet2.getMagnet().move(0.0, -1.f);
         }
 
-        //(*mainWindow).setView(view);
-
         (*mainWindow).clear();
 
         player1_area.Draw(*mainWindow);
         player2_area.Draw(*mainWindow);
         border_area1.Draw(*mainWindow);
         border_area2.Draw(*mainWindow);
-        object.Draw(*mainWindow);
         magnet1.Draw(*mainWindow);
         magnet2.Draw(*mainWindow);
         

@@ -1,3 +1,7 @@
+//
+// Created by Laura on 07.05.2023.
+//
+
 #include <iostream>
 #include "Contact.h"
 
@@ -8,97 +12,81 @@ Contact::Contact(RigidBody *a, RigidBody *b, sf::Vector3f n, sf::Vector3f p) {
     this->p = p;
 }
 
-bool Contact::colliding(Contact *c) {
-    std::cout << "------------------- colliding --------------------" << std::endl;
-     sf::Vector3f padot = pt_velocity(c->a, c->p);
-     sf::Vector3f pbdot = pt_velocity(c->b, c->p);
-     std::cout << "Verlocity padot   X: " << padot.x << " Y: " << padot.y << std::endl;
-     std::cout << "Verlocity pbdot   X: " << pbdot.x << " Y: " << pbdot.y << std::endl;
-     double vrel = c->a->calcDotProd(c->n, (padot - pbdot)); //TODO: can i write - like that?
-
-     std::cout << "verl: " << vrel << std::endl;
-     if(vrel > 1) //moving away
+/*bool Contact::colliding(Contact& c) {
+     sf::Vector3f padot = pt_velocity(*c.a, c.p);
+     sf::Vector3f pbdot = pt_velocity(*c.b, c.p);
+     c.n = {0.0f, 1.0f, 0.0f};
+     double vrel = c.a->calcDotProd(c.n, (padot - pbdot)); //TODO: can i write - like that?
+     //std::cout << "verl Beneath: " << vrel << std::endl;
+     if(vrel > 1.0f) //moving away
      {
-         std::cout << "Object is moving away" << std::endl;
-         return false;
+         return true;
      }
-     else if(vrel > -1) //resting contact
+     else if(vrel > -1.0f) //resting contact
      {
-         std::cout << "There is resting contact" << std::endl;
-         return false;
+         return true;
      }
      else {
-        std::cout << "They are touching" << std::endl;
+
         return true;
      }
 }
 
-void Contact::collision(Contact *c, double epsilon) {
-    std::cout << "------------------ collision ------------------" << std::endl;
-     sf::Vector3f padot = pt_velocity(c->a, c->p);
-    std::cout << "HERE 0.1" << std::endl;
-     sf::Vector3f pbdot = pt_velocity(c->b, c->p);
-    std::cout << "HERE 0.2" << std::endl;
-     sf::Vector3f n = c->n;
-    std::cout << "HERE 0.3" << std::endl;
-     sf::Vector3f ra = p - c->a->x;
-    std::cout << "HERE 0.4" << std::endl;
-     sf::Vector3f rb = p - c->b->x;
-    std::cout << "HERE 0.5" << std::endl;
-     double vrel = c->a->calcDotProd(n, padot - pbdot);
-    std::cout << "HERE 0.6" << std::endl;
+void Contact::collision(Contact& c, double epsilon) {
+     sf::Vector3f padot = pt_velocity(*c.a, c.p);
+     sf::Vector3f pbdot = pt_velocity(*c.b, c.p);
+     c.n = {0.0f, 1.0f, 0.0f};
+     sf::Vector3f n = c.n;
+     sf::Vector3f ra = p - c.a->x;
+     sf::Vector3f rb = p - c.b->x;
+     double vrel = RigidBody::calcDotProd(n, padot - pbdot);
+
+     vrel = -2.0f;
      double numerator = -(1 + epsilon) * vrel;
 
-     std::cout << "HERE 1" << std::endl;
      //Calculate denominator in four parts
-     double term1 = 1 / c->a->mass;
-     double term2 = 1 / c->b->mass;
-     double term3 = c->a->calcDotProd(n,
-                                      (c->a->calcCrossProd(c->a->calcMatrixMult(c->a->Iinv, c->a->calcCrossProd(ra, n)), ra)));
-     double term4 = c->a->calcDotProd(n,
-                                     (c->b->calcCrossProd(c->b->calcMatrixMult(c->b->Iinv, c->a->calcCrossProd(rb, n)), rb)));
+     double term1 = 1.0f / c.a->mass;
+     double term2 = 1.0f / c.b->mass;
+     double term3 = RigidBody::calcDotProd(n,
+                                      (RigidBody::calcCrossProd(RigidBody::calcMatrixMult(c.a->Iinv, RigidBody::calcCrossProd(ra, n)), ra)));
+     double term4 = RigidBody::calcDotProd(n,
+                                     (RigidBody::calcCrossProd(RigidBody::calcMatrixMult(c.b->Iinv, RigidBody::calcCrossProd(rb, n)), rb)));
 
-    std::cout << "HERE 2" << std::endl;
      //Compute the impulse magnitude
      double j = numerator / (term1 + term2 + term3 + term4);
-     sf::Vector3f force = sf::Vector3f(n.x * j, n.y * j, n.z * j);
+     sf::Vector3f force = sf::Vector3f((float)(n.x * j), (float)(n.y * j), (float)(n.z * j));
 
      //Apply the impulse to the bodies
-     c->a->P += force;
-     c->b->P -= force;
-     c->a->L += c->a->calcCrossProd(ra, force);
-     c->b->L -= c->b->calcCrossProd(rb, force);
+     c.a->P += force;
+     c.b->P -= force;
+     c.a->L += RigidBody::calcCrossProd(ra, force);
+     c.b->L -= RigidBody::calcCrossProd(rb, force);
 
-    std::cout << "HERE 3" << std::endl;
      //recompute auxiliary variables
-     c->a->v = sf::Vector3f(c->a->P.x / c->a->mass, c->a->P.y / c->a->mass, c->a->P.z / c->a->mass);
-     c->b->v = sf::Vector3f(c->b->P.x / c->b->mass, c->b->P.y / c->b->mass, c->b->P.z / c->b->mass);
-     c->a->omega = c->a->calcMatrixMult(c->a->Iinv, c->a->L);
-     c->b->omega = c->b->calcMatrixMult(c->b->Iinv, c->b->L);
+     c.a->v = sf::Vector3f((float)(c.a->P.x / c.a->mass), (float)(c.a->P.y / c.a->mass), (float)(c.a->P.z / c.a->mass));
+     c.b->v = sf::Vector3f((float)(c.b->P.x / c.b->mass), (float)(c.b->P.y / c.b->mass), (float)(c.b->P.z / c.b->mass));
+     c.a->omega = RigidBody::calcMatrixMult(c.a->Iinv, c.a->L);
+     c.b->omega = RigidBody::calcMatrixMult(c.b->Iinv, c.b->L);
 }
 
-void Contact::FindAllCollisions(Contact *contacts, int ncontacts) {
-    std::cout << "--------------------- FindAllCollisions --------------------" << std::endl;
+void Contact::FindAllCollisions(Contact& contact, int ncontacts) {
 
      bool had_collision;
      double epsilon = 0.5;
 
-     do {
+    // do {
          had_collision = false;
 
-         std::cout << "ncontacts: " << ncontacts << std::endl;
          for(int i = 0; i < ncontacts; i++) {
-             std::cout << "i: " << i << std::endl;
-             if(colliding(&contacts[i])) {
-                 std::cout << "---------------- Colliding was true --------------" << std::endl;
-                 collision(&contacts[i], epsilon);
+             if(colliding(contact)) {
+                 collision(contact, epsilon);
                  had_collision = true;
 
                  //Tell the solver we had a collision
                  //ode_discontinues(); //TODO: what is that?
              }
          }
-     } while(had_collision);
+     //} while(had_collision);
 }
 
 void Contact::computeContactForces(Contact *contacts, int ncontacts, double t) {
@@ -193,7 +181,7 @@ void Contact::compute_b_vector(Contact *contacts, int ncontacts, std::vector<dou
          double k1 = c->a->calcDotProd(((a_ext_part + a_vel_part) - (b_ext_part + b_vel_part)), n);
          sf::Vector3f ndot = computeNdot(c);
          double k2 = c->a->calcDotProd(sf::Vector3f(ndot.x * 2, ndot.y * 2, ndot.z * 2),
-                                 ((pt_velocity(A, c->p) - pt_velocity(B, c->p))));
+                                 ((pt_velocity(*A, c->p) - pt_velocity(*B, c->p))));
 
          b[i] = k1 + k2;
 
@@ -261,71 +249,57 @@ double Contact::compute_aij(Contact ci, Contact cj) {
 }
 
 //TODO: can i make + like that?
-sf::Vector3f Contact::pt_velocity(RigidBody *body, sf::Vector3f p) {
-    std::cout << "----------------- pt_velocity -----------------" << std::endl;
-    if(body->fixed){
+sf::Vector3f Contact::pt_velocity(RigidBody& body, sf::Vector3f& p) {
+    if(body.fixed){
         return sf::Vector3f(0.0f, 0.0f, 0.0f);
     }
     else {
-        return body->v + body->calcCrossProd(body->omega, sf::Vector3f(p.x - body->x.x, p.y - body->x.y, p.z - body->x.z));
+        return body.v + body.calcCrossProd(body.omega, sf::Vector3f(p.x - body.world_coord.x, p.y - body.world_coord.y, p.z - body.world_coord.z));
     }
 }
+*/
+//-------------------------------Different approach -------------------------------------------------------------------
 
 // Detect a collision between two rigid bodies and apply the necessary impulses
 void Contact::DetectAndResolveCollision(Contact& contact) {
 
-    sf::Vector3f collisonPoint = contact.p;
-    std::cout << "CollisionPoint   X:" << collisonPoint.x << " Y: " << collisonPoint.y << std::endl;
-    std::cout << "contact.n   X:" << contact.n.x << " Y: " << contact.n.y << std::endl;
-    std::cout << "Collision body1.world_coord   X:" << contact.a->world_coord.x << " Y: " << contact.a->world_coord.y << std::endl;
-    std::cout << "Collision body2.world_coord   X:" << contact.b->world_coord.x << " Y: " << contact.b->world_coord.y << std::endl;
+    //sf::Vector3f tmp = contact.a->calcCrossProd((contact.p - contact.a->world_coord), (contact.p - contact.b->world_coord));
+    //tmp.z = 1;
     // Calculate the contact point and normal
-    sf::Vector3f normal = contact.a->normalizeVector(contact.a->calcCrossProd((collisonPoint - contact.a->world_coord), (collisonPoint - contact.b->world_coord)));
+    sf::Vector3f normal = contact.a->normalizeVector(contact.b->world_coord - contact.a->world_coord);
+    contact.n = normal;
 
     // Calculate and apply the impulses to resolve the collision
     sf::Vector3f impulse = contact.CalculateImpulse(contact);
+    
+    // exit(0);
     contact.ApplyImpulse(*contact.a, impulse, contact);
     contact.ApplyImpulse(*contact.b, (impulse * -1.0f), contact);
 }
 
-// Calculate the impulse to apply at a point of collision between two rigid bodies
-sf::Vector3f Contact::CalculateImpulse(Contact &contact) {
-    std::cout << "Normal    X: " << contact.n.x << " Y: " << contact.n.y << std::endl;
-    std::cout << "CalcRelativeVelocticy   X: " << CalculateRelativeVelocity(contact).x << " Y: "
-              << CalculateRelativeVelocity(contact).y << std::endl;
+sf::Vector3f Contact::CalculateImpulse(Contact &contact) { //THIS
 
     float e = 0.8f; // coefficient of restitution
     double j = (-(1.0f + e) * contact.a->calcDotProd(CalculateRelativeVelocity(contact),contact.n))
                /
-               ((1.0f / contact.a->mass) + (1.0f / contact.b->mass) + //TODo: are contact.a.world_coord right or contact.a.x?
-                contact.a->calcDotProd(contact.n, (contact.a->calcDivScalar(contact.a->calcCrossProd(contact.a->world_coord - contact.p, contact.n),
-                                                               contact.a->GetMomentOfInertia()))) + //TODO: force is definitely not right
-                contact.b->calcDotProd(contact.n, (contact.b->calcDivScalar(contact.b->calcCrossProd(contact.b->world_coord - contact.p, contact.n),
-                                                               contact.b->GetMomentOfInertia()))));
+               ((1.0f / contact.a->mass) + (1.0f / contact.b->mass));
+
     return {(float)(contact.n.x * j), (float)(contact.n.y * j), float(contact.n.z * j)};
 }
 
-// Apply an impulse to a rigid body at a point of collision
 void Contact::ApplyImpulse(RigidBody &body, const sf::Vector3f & impulse, Contact& contact) {
-    std::cout << "Impulse   X: " << impulse.x << " Y: " << impulse.y << std::endl;
-    std::cout << "Linear momentum before    X: " << body.L.x << " Y: " << body.L.y << std::endl;
-    body.L.x += impulse.x;
-    body.L.y += impulse.y;
-    body.L.z += impulse.z;
-    std::cout << "Linear momentum after    X: " << body.L.x << " Y: " << body.L.y << std::endl;
-    int n = 0;
-    std::cin >> n;
-    body.P += body.calcCrossProd((contact.p - body.world_coord), impulse);
+    body.P.x += impulse.x;
+    body.P.y += impulse.y;
+    body.P.z += impulse.z;
+    body.L += body.calcCrossProd((contact.p - body.world_coord), impulse);
     body.v = body.calcDivScalar(body.P, body.mass);
     body.omega = body.calcMatrixMult(body.Iinv, body.L);
 }
 
 sf::Vector3f Contact::CalculateRelativeVelocity(Contact& contact) {
     sf::Vector3f r1 = contact.p;
-    std::cout << "Body1 worldCoodinates   X: " << contact.a->world_coord.x << " Y: " << contact.a->world_coord.y << std::endl;
-    std::cout << "Body2 worldCoodinates   X: " << contact.b->world_coord.x << " Y: " << contact.b->world_coord.y << std::endl;
-    sf::Vector3f v1 = contact.a->L + contact.a->calcCrossProd(contact.a->P, contact.p - contact.a->world_coord);
-    sf::Vector3f v2 = contact.b->L + contact.b->calcCrossProd(contact.b->P, contact.p - contact.b->world_coord);
+    sf::Vector3f v1 = contact.a->P + contact.a->calcCrossProd(contact.a->L, contact.p - contact.a->world_coord);
+    sf::Vector3f v2 = contact.b->P + contact.b->calcCrossProd(contact.b->L, contact.p - contact.b->world_coord);
+
     return v2 - v1;
 }
-

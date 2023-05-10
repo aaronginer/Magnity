@@ -44,21 +44,6 @@ RigidBody::RigidBody(float mass, float density, unsigned int type, float width, 
 void RigidBody::DisplayBodies(sf::RenderWindow &window) {
     //loop through all bodies and display them
     for (auto & rigid_bodie : *rigid_bodies) {
-        rigid_bodie->world_coord.x = rigid_bodie->world_coord.x + rigid_bodie->x.x;
-        rigid_bodie->world_coord.y = rigid_bodie->world_coord.y + rigid_bodie->x.y;
-        //check if body has reached border
-        if(rigid_bodie->world_coord.y >= 335.0f) {
-            rigid_bodie->body.setPosition(rigid_bodie->world_coord.x, 335.0f);
-            rigid_bodie->world_coord.y = 335.0f;
-        }
-        else if(rigid_bodie->world_coord.y <= 90.0f) {
-            rigid_bodie->body.setPosition(rigid_bodie->world_coord.x, 90.0f);
-            rigid_bodie->world_coord.y = 90.0f;
-        }
-        else {
-            rigid_bodie->body.setPosition(rigid_bodie->world_coord.x, rigid_bodie->world_coord.y);
-        }
-
         window.draw(rigid_bodie->body);
     }
 }
@@ -153,13 +138,13 @@ void RigidBody::ArrayToState(RigidBody *rb, double *y) {
 }
 
 void RigidBody::ArrayToBodies(double *x) {
-    for(int i = 0; i < NBODIES; i++) {
+    for(int i = 0; i < rigid_bodies->size(); i++) {
         ArrayToState(rigid_bodies->at(i), &x[i * STATE_SIZE]);
     }
 }
 
 void RigidBody::BodiesToArray(double *x) {
-    for(int i = 0; i < NBODIES; i++) {
+    for(int i = 0; i < rigid_bodies->size(); i++) {
         StateToArray(rigid_bodies->at(i), &x[i * STATE_SIZE]);
     }
 }
@@ -168,7 +153,7 @@ void RigidBody::Dxdt(double t, double x[], double xdot[]) {
     //put data in x[] into rigid_bodies vector
     ArrayToBodies(x);
 
-    for(int i = 0; i < NBODIES; i++) {
+    for(int i = 0; i < rigid_bodies->size(); i++) {
         ComputeForceAndTorque(t, rigid_bodies->at(i));
         DdtStateToArray(rigid_bodies->at(i), &xdot[i * STATE_SIZE]);
     }
@@ -340,17 +325,23 @@ Matrix RigidBody::calcIinversebody() {
 float t = 0;
 void RigidBody::RunSimulation(float deltaTime, sf::RenderWindow &window)
 {
-    double x0[STATE_SIZE * NBODIES], xFinal[STATE_SIZE * NBODIES];
+    double x0[STATE_SIZE * rigid_bodies->size()], xFinal[STATE_SIZE * rigid_bodies->size()];
     BodiesToArray(xFinal);
 
     t += deltaTime;
-    for(int i = 0; i < STATE_SIZE * NBODIES; i++) {
+    for(int i = 0; i < STATE_SIZE * rigid_bodies->size(); i++) {
         x0[i] = xFinal[i];
     }
 
-    ode(x0, xFinal, STATE_SIZE * NBODIES, t-deltaTime, t);
+    ode(x0, xFinal, STATE_SIZE * rigid_bodies->size(), t-deltaTime, t);
     ArrayToBodies(xFinal);
     checkForCollisions();
+
+    for (auto & rigid_bodie : *rigid_bodies) {
+        rigid_bodie->world_coord.x = rigid_bodie->world_coord.x + rigid_bodie->x.x;
+        rigid_bodie->world_coord.y = rigid_bodie->world_coord.y + rigid_bodie->x.y;
+        rigid_bodie->body.setPosition(rigid_bodie->world_coord.x, rigid_bodie->world_coord.y);
+    }
 }
 
 //TODO: This is from the sheet

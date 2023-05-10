@@ -1,6 +1,6 @@
 # Compiler and flags
 CC = g++
-CFLAGS = -std=c++17 -Wall # -Werror -pedantic
+CFLAGS = -std=c++17 -Wall -g# -Werror -pedantic
 
 # SFML libraries
 SFML_LIBS = -lsfml-graphics -lsfml-window -lsfml-system
