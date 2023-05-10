@@ -4,6 +4,7 @@
 #include <SFML/Graphics.hpp>
 #include <unistd.h>
 
+#define M_PI 3.14159265358979323846
 #define NUM_RIGID_BODIES 2
 //array of rigid bodies
 std::vector<RigidBody*>* rigid_bodies = new std::vector<RigidBody*>;
@@ -188,7 +189,6 @@ Matrix RigidBody::calcTransponseMatrix(Matrix matrix) {
 void RigidBody::ComputeForceAndTorque(double t, RigidBody *rb) {
     if(rb->type == 1) {
         rb->force = sf::Vector3f(rb->force.x, -9.81f * rb->mass, rb->force.z);
-        std::cout << "Force  X: " << rb->force.x << " Y: " << rb->force.y << std::endl;
     }
     else {
         rb->force = sf::Vector3f(rb->force.x, 9.81f * rb->mass, rb->force.z);
