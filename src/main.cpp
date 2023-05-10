@@ -39,7 +39,8 @@ int fps = 60;
 int easing = 0;
 bool gui_visible = true;
 
-RigidBody ball(1.0f, 1.0f, 1, 20.0f, 20.0f);
+RigidBody* ball_ptr;
+
 
 void createPathInterpolationPanel(tgui::Panel::Ptr panel, sf::RenderWindow& window)
 {
@@ -203,7 +204,7 @@ void animation_loop()
 
         // printf("time_delta: %f\n", delta_time.count()/1000.f);
         s.interpolate(deltaTime);
-        ball.RunSimulation(deltaTime);
+        RigidBody::RunSimulation(deltaTime, *mainWindow);
 
         usleep(1000000 / animation_update_rate);
     }
@@ -254,9 +255,9 @@ int main()
     PlayerArea player2_area(&playerAreaTexture, view, 2);                                    //Player 1 Area
     Border border_area1(&borderTexture, 0, player1_area.getArea().getSize().y, player1_area.getArea().getSize().x, 10.f); //Border player 1 area
     Border border_area2(&borderTexture, 0, view.getSize().y - player2_area.getArea().getSize().y, player1_area.getArea().getSize().x, 10.f); //Border player 2 area
-    Object object(&objectTexture);                                                                    //Object
-    
-    ball.addToRigidBodies(&ball);
+    Object object(&objectTexture);    
+    RigidBody ball(1.0f, 1.0f, 1, 20.0f, 20.0f, objectTexture, false, view.getSize().x/2, view.getSize().y/2);                                                      //Object
+    ball_ptr = &ball;
 
     Magnet magnet1(&magnetTexture, view, 1);                                                          //Player 1
     Magnet magnet2(&magnetTexture, view, 2);                                                          //Player 2
@@ -343,8 +344,6 @@ int main()
         //(*mainWindow).setView(view);
 
         (*mainWindow).clear();
-
-        ball.DisplayBodies(*mainWindow);
 
         player1_area.Draw(*mainWindow);
         player2_area.Draw(*mainWindow);

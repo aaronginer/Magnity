@@ -12,7 +12,6 @@
 #include <cmath>
 #include "Quaternion.h"
 #include "Matrix.h"
-#include "Contact.h"
 #ifndef MAGNITY_RIGIDBODY_H
 #define MAGNITY_RIGIDBODY_H
 
@@ -24,88 +23,113 @@
 class RigidBody {
 
     public:
-        RigidBody(float mass, float density, unsigned int type, float width, float height);
-        void addToRigidBodies(RigidBody *rigidBody);
+        RigidBody(float mass, float density, unsigned int type, float width, float height, const sf::Texture& texture,
+                    bool fixed, float posX, float posY);
+        static void addToRigidBodies(RigidBody *rigidBody);
         void calcCenterOfMass();
-        double calcMagnitude(sf::Vector3f vec); //length of vector
+        static double calcMagnitude(sf::Vector3f vec); //length of vector
         sf::Vector3f calcUnitVector(sf::Vector3f vec);
-        double calcDotProd(sf::Vector3f vec1, sf::Vector3f vec2);
-        sf::Vector3f calcDivScalar(sf::Vector3f vec, double scalar);
-        sf::Vector3f calcCrossProd(sf::Vector3f vec1, sf::Vector3f vec2);
-        Matrix calcMatrixMult(Matrix matrix1, Matrix matrix2);
-        sf::Vector3f calcMatrixMult(Matrix matrix1, sf::Vector3f vec);
+        static double calcDotProd(sf::Vector3f vec1, sf::Vector3f vec2);
+        static double calcDotProd(sf::Vector2f vec1, sf::Vector2f vec2);
+        static sf::Vector3f calcDivScalar(sf::Vector3f vec, double scalar);
+        static sf::Vector3f calcCrossProd(sf::Vector3f vec1, sf::Vector3f vec2);
+        static Matrix calcMatrixMult(Matrix matrix1, Matrix matrix2);
+        static sf::Vector3f calcMatrixMult(Matrix matrix1, sf::Vector3f vec);
         sf::Vector3f addVectors(sf::Vector3f vec1, sf::Vector3f vec2);
         sf::Vector3f multScalar(sf::Vector3f vec, double scalar);
         sf::Vector3f negateVector(sf::Vector3f vec); // lets vector point in opposite direction
         sf::Vector3f getPosition();
-        Matrix calcTransponseMatrix(Matrix matrix);
-        void StateToArray(RigidBody *rb, double *y);
-        void ArrayToState(RigidBody *rb, double *y);
-        void ArrayToBodies(double x[]);
-        void BodiesToArray(double x[]);
+        static Matrix calcTransponseMatrix(Matrix matrix);
+        static void StateToArray(RigidBody *rb, double *y);
+        static void ArrayToState(RigidBody *rb, double *y);
+        static void ArrayToBodies(double x[]);
+        static void BodiesToArray(double x[]);
         void Dxdt(double t, double x[], double xdot[]);
         void DdtStateToArray(RigidBody *rb, double *xdot);
         Matrix Star(sf::Vector3f vec);
         Quaternion matrixToQuaternion(Matrix matrix);
         //TODO:
-        void ComputeForceAndTorque(double t, RigidBody *rb);
+        static void ComputeForceAndTorque(double t, RigidBody *rb);
         //compute rb->force and rb->torque
-        Quaternion normalizeQuant(Quaternion quaternion);
-        Matrix QuaternionToMatrix(Quaternion quaternion);
-        Quaternion calcQuatMult(Quaternion q1, Quaternion q2);
-        Quaternion calcQuatMult(Quaternion q, double scalar);
-        Matrix calcIbody();
+        static Quaternion normalizeQuant(Quaternion quaternion);
+        static Matrix QuaternionToMatrix(Quaternion quaternion);
+        static Quaternion calcQuatMult(Quaternion q1, Quaternion q2);
+        static Quaternion calcQuatMult(Quaternion q, double scalar);
+        Matrix calcIbody() const;
         Matrix calcIinversebody();
-        void RunSimulation(float deltaTime);
-        void DisplayBodies(sf::RenderWindow &window);
-        void ode(double x0[], double xEnd[], int len, double t0, double t1);
+        static void RunSimulation(float deltaTime, sf::RenderWindow &window);
+        static void DisplayBodies(sf::RenderWindow &window);
+        static void ode(double x0[], double xEnd[], int len, double t0, double t1);
         void resetPosition();
+        sf::Vector3f normalizeVector(sf::Vector3f vec);
         sf::Vector3f pt_velocity(RigidBody *body, sf::Vector3f p); //return velocity of point on rigid body
-        bool colliding(Contact *c, sf::Vector3f p); //return true if bodies are colliding - set THRESHOLD
-        void collision(Contact *c, double epsilon, sf::Vector3f p); //loop through all contact points
-        void FindAllCollisions(Contact contacts[], int ncontacts);
-        void compute_a_matrix(Contact contacts[], int ncontacts, Matrix &a);
-        void compute_b_vector(Contact contacts[], int ncontacts, std::vector<double> &b);
         void qp_solve(Matrix &a, std::vector<double> &b, std::vector<double> &f);
-        void computeContactForces(Contact contacts[], int ncontacts, double t);
-        sf::Vector3f computeNdot(Contact *c); //return derivative of the normal vector
-        double compute_aij(Contact ci, Contact cj);
-
+        bool isPointOnVector(sf::Vector3f P, sf::Vector3f v, sf::Vector3f originV);
+        static void checkForCollisions();
 
         double calcInertia(sf::Vector3f point_force, sf::Vector3f force);
         double calcTau(sf::Vector3f point_force, sf::Vector3f force);
         unsigned int getID();
         unsigned int getType();
+        sf::Vector3f getWorldCoord();
+        void updateWorldCoord(double xCoord, double yCoord);
+        sf::Shape getShape();
+        sf::Vector3f CalculateRelativeVelocity(RigidBody& body1, RigidBody& body2, const sf::Vector3f& contact_point);
+        void ApplyImpulse(RigidBody& body, const sf::Vector3f& contact_point, const sf::Vector3f & impulse);
+        float GetMomentOfInertia();
+        void updateRigidBody(RigidBody& body, double dt);
 
-    private:
+    //save upper left and bottom right corner for box collision detection
+    sf::Vector3f leftup = {0.0f, 0.0f, 0.0f};
+    sf::Vector3f rightbottom = {0.0f, 0.0f, 0.0f};
+    //state variables
+    sf::Vector3f x;
+    double mass;
+    Matrix Ibodyinv;
+    Matrix Ibody;
+    Matrix Iinv; //I^-1(t) inertia
+    float momentOfInertia;
+    sf::Vector3f P;
+//P(t) linear momentum
+    sf::Vector3f L;
+//L(t) angular momentum
+    //Derived quantities (auxiliary variables)
+    sf::Vector3f v;
+//v(t)
+    sf::Vector3f omega;
+//w(t)
+    //Computed quantities
+    sf::Vector3f force;
+    sf::Vector3f torque;
+    bool fixed;
+//center of mass x(t)
+    Quaternion q;
+    float width;
+    float height;
+    sf::Vector3f position;
+    float angle;
+    //float angularVelocity;
+    sf::RectangleShape body;
+    static void CalculateBoxInertia(RigidBody *boxShape);
+    void RunRigidBodySimulation(float deltaTime, sf::RenderWindow &window);
+    void ComputeForceAndTorque(RigidBody *rigidBody);
+    void InitializeRigidBodies();
+    void PrintRigidBodies();
+    //BoxShape shape;
+////RIGID BODY SHEET - 3D ----------------------------------------------------------------------
+    //constant quantities
+    sf::Vector3f world_coord;
+private:
         unsigned int id;
         unsigned int type;
         float density;
-        float width;
-        float height;
         float radius;
 
 
-        ////RIGID BODY SHEET - 3D ----------------------------------------------------------------------
-        //constant quantities
-        double mass;
-        Matrix Ibody;
-        Matrix Ibodyinv;
-        //state variables
-        sf::Vector3f x; //center of mass x(t)
-        Quaternion q;//use quaterinion instead of std::vector<sf::Vector3f> R; //R(t)
+    //use quaterinion instead of std::vector<sf::Vector3f> R; //R(t)
         Matrix R; //old Rotation matrix - needed for some calculations
-        sf::Vector3f P; //P(t)
-        sf::Vector3f L; //L(t)
-        //Derived quantities (auxiliary variables)
-        Matrix Iinv; //I^-1(t) inertia
-        sf::Vector3f v; //v(t)
-        sf::Vector3f omega; //w(t)
-        //Computed quantities
-        sf::Vector3f force;
-        sf::Vector3f torque;
 
-        ////spatial variables
+    ////spatial variables
         //Center of mass at (0,0,0)
         //Rotation matrix R(t) = 3x3 matrix
         //center of mass in body space = (0,0,0) in world space = ?
@@ -197,6 +221,8 @@ class RigidBody {
         //q1 * q2 means first rotation q1 followed by rotation q2
         //q.(t) = 1/2 * w(t) * q(t) -> (w(t) * q(t) = [0,w(t)] * [s,v])
 
+    float max(float x, float x1);
+    float min(float x, float x1);
 };
 
 
