@@ -29,6 +29,5 @@
 *.out
 *.app
 
-winlib/
 obj/
 .vscode/
