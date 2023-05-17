@@ -15,6 +15,7 @@
 #include "Object.h"
 #include "Magnet.h"
 #include "RigidBody.h"
+#include "ParticleDynamics.h"
 
 using namespace std::chrono;
 
@@ -24,17 +25,18 @@ const float AR = (float)WIDTH/(float)HEIGTH;
 
 sf::RenderWindow *mainWindow;
 
-std::thread test_thread;
+std::thread animation_loop_thread;
 
 
 Spline s({{200, 200}, {250, 200}, {250, 500}, {500, 500}, {500, 200}, {550, 200}});
+ParticleDynamics pdyn;
 
 bool dragging_ctrl_point = false;
 sf::Sprite* ctrl_point_to_drag;
 size_t ctrl_point_to_drag_idx;
 
 // Global variables
-int animation_update_rate = 100;
+int animation_update_rate = 300;
 int fps = 60;
 int easing = 0;
 bool gui_visible = true;
@@ -200,11 +202,13 @@ void animation_loop()
     {
         deltaTime = clock.restart().asSeconds();
 
+        pdyn.update(deltaTime);
         // printf("time_delta: %f\n", delta_time.count()/1000.f);
-        s.interpolate(deltaTime);
-        RigidBody::RunSimulation(deltaTime, *mainWindow);
+        // s.interpolate(deltaTime);
+        // RigidBody::RunSimulation(deltaTime, *mainWindow);
 
-        usleep(1000000 / animation_update_rate);
+        // subtract time needed for calculations
+        usleep((1000000 / animation_update_rate) - clock.getElapsedTime().asMicroseconds());
     }
 }
 
@@ -219,14 +223,14 @@ int main()
     tgui::GuiSFML gui(*mainWindow);
 
     // Create a panel to serve as the background of the GUI
-    tgui::Panel::Ptr panel = tgui::Panel::create();
+    /*tgui::Panel::Ptr panel = tgui::Panel::create();
     panel->setSize("100%", "100%");
     panel->getRenderer()->setBackgroundColor(sf::Color(0, 0, 255, 128));
     gui.add(panel);
 
     createPathInterpolationPanel(panel, *mainWindow);
     createToggleButtons(panel, gui);
-
+    */
     // OBJECTS
 
     //------------------------------------- Textures -------------------------------------//
@@ -256,17 +260,29 @@ int main()
     Border border_area1(&borderTexture, 0, player1_area.getArea().getSize().y, player1_area.getArea().getSize().x, 10.f); //Border player 1 area
     Border border_area2(&borderTexture, 0, view.getSize().y - player2_area.getArea().getSize().y, player1_area.getArea().getSize().x, 10.f); //Border player 2 area
 
-    RigidBody ball(100.0f, 2.5f, 0, 20.0f, 20.0f, objectTexture, false,
+    /*RigidBody ball(100.0f, 2.5f, 0, 20.0f, 20.0f, objectTexture, false,
                    206.0f, 206.0f);
     RigidBody ball2(100.0f, 2.5f, 1, 20.0f, 20.0f, objectTexture2, false,
                    300.0f, 306.0f);
-
+    */
 
     Magnet magnet1(&magnetTexture, view, 1);                                                          //Player 1
-    Magnet magnet2(&magnetTexture, view, 2);                                                          //Player 2
+    Magnet magnet2(&magnetTexture, view, 2);       
+    
+    Particle p1(objectTexture, view.getCenter(), {0, 0}, 500000);
+    p1.sprite.setScale({0.01f, 0.01f});
+    ForceSource f(view.getCenter()+sf::Vector2f(100, 0), INT32_MAX);
+    ForceSource f2(view.getCenter()+sf::Vector2f(0, 100), 20);
+    ForceSource f3(view.getCenter()+sf::Vector2f(-100, 0), INT32_MAX);
+    ForceSource f4(view.getCenter()+sf::Vector2f(0, -200), INT32_MAX);
+    pdyn.addParticle(p1);
+    pdyn.addForceSource(f);    
+    pdyn.addForceSource(f2);   
+    pdyn.addForceSource(f3);   
+    pdyn.addForceSource(f4);                                                //Player 2
+    
 
-
-    test_thread = std::thread(animation_loop);
+    animation_loop_thread = std::thread(animation_loop);
 
     while ((*mainWindow).isOpen())
     {
@@ -353,15 +369,18 @@ int main()
         magnet1.Draw(*mainWindow);
         magnet2.Draw(*mainWindow);
         
-        s.drawObject();
-        s.drawCurve();
-        s.drawControlPoints();
-        s.drawArcSamples();
+        // s.drawObject();
+        // s.drawCurve();
+        // s.drawControlPoints();
+        // s.drawArcSamples();
+
+        pdyn.draw(*mainWindow);
+        // pdyn.drawTrail(*mainWindow);
         
-        panel->setVisible(gui_visible);
+        // panel->setVisible(gui_visible);
         gui.draw();
 
-        RigidBody::DisplayBodies(*mainWindow);
+        // RigidBody::DisplayBodies(*mainWindow);
         (*mainWindow).display();
     }
 
