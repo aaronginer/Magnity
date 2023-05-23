@@ -29,14 +29,14 @@ std::thread animation_loop_thread;
 
 
 Spline s({{200, 200}, {250, 200}, {250, 500}, {500, 500}, {500, 200}, {550, 200}});
-ParticleDynamics pdyn;
+ParticleDynamics pdyn(false);
 
 bool dragging_ctrl_point = false;
 sf::Sprite* ctrl_point_to_drag;
 size_t ctrl_point_to_drag_idx;
 
 // Global variables
-int animation_update_rate = 300;
+int animation_update_rate = 500;
 int fps = 60;
 int easing = 0;
 bool gui_visible = true;
@@ -269,17 +269,23 @@ int main()
     Magnet magnet1(&magnetTexture, view, 1);                                                          //Player 1
     Magnet magnet2(&magnetTexture, view, 2);       
     
-    Particle p1(objectTexture, view.getCenter(), {0, 0}, 500000);
+    // Particle p1(objectTexture, view.getCenter(), {0, 0}, 1);
+    Particle p1(objectTexture, view.getCenter()-sf::Vector2f(view.getCenter().x/2, 0), {0, 0}, 10);
     p1.sprite.setScale({0.01f, 0.01f});
-    ForceSource f(view.getCenter()+sf::Vector2f(100, 0), INT32_MAX);
-    ForceSource f2(view.getCenter()+sf::Vector2f(0, 100), 20);
-    ForceSource f3(view.getCenter()+sf::Vector2f(-100, 0), INT32_MAX);
-    ForceSource f4(view.getCenter()+sf::Vector2f(0, -200), INT32_MAX);
+    ForceSource f(ForceType::AntiGravity, view.getCenter(), 50000);
+    ForceSource f1(ForceType::Gravity, view.getCenter(), 50000);
+    ForceSource f_c(ForceType::Constant, sf::Vector2f(0, 200));
+    //ForceSource f(ForceType::Gravity, view.getCenter()+sf::Vector2f(100, 0), 50000);
+    //ForceSource f2(view.getCenter()+sf::Vector2f(0, 100), 1);
+    //ForceSource f3(ForceType::Gravity, view.getCenter()+sf::Vector2f(-100, 0), 50000);
+    //ForceSource f4(ForceType::Gravity, view.getCenter()+sf::Vector2f(0, -200), 50000);
     pdyn.addParticle(p1);
-    pdyn.addForceSource(f);    
-    pdyn.addForceSource(f2);   
-    pdyn.addForceSource(f3);   
-    pdyn.addForceSource(f4);                                                //Player 2
+    pdyn.addForceSource(&f);   
+    pdyn.addForceSource(&f1);  
+    pdyn.addForceSource(&f_c);   
+    //pdyn.addForceSource(f2);   
+    //pdyn.addForceSource(f3);   
+    //pdyn.addForceSource(f4);                                                //Player 2
     
 
     animation_loop_thread = std::thread(animation_loop);
@@ -334,7 +340,6 @@ int main()
         //keyboard input player 1
         if(Keyboard::isKeyPressed(Keyboard::Key::A)) {
             magnet1.getMagnet().move(-1.f, 0.0);
-            printf("--------------------------- (%f|%f)\n", magnet1.getPosition().x, magnet1.getPosition().y);
         }
         if(Keyboard::isKeyPressed(Keyboard::Key::D)) {
             magnet1.getMagnet().move(1.f, 0.0);
@@ -369,6 +374,9 @@ int main()
         magnet1.Draw(*mainWindow);
         magnet2.Draw(*mainWindow);
         
+        sf::Vector2i mousePos = Mouse::getPosition(*mainWindow);
+        f.x = {(float) mousePos.x, (float) mousePos.y};
+
         // s.drawObject();
         // s.drawCurve();
         // s.drawControlPoints();
@@ -376,7 +384,8 @@ int main()
 
         pdyn.draw(*mainWindow);
         // pdyn.drawTrail(*mainWindow);
-        
+        pdyn.drawForceField(*mainWindow);
+
         // panel->setVisible(gui_visible);
         gui.draw();
 
