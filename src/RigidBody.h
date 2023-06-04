@@ -1,302 +1,155 @@
-#include <iostream>
-#include "Contact.h"
+///////////////////////////////////////////////////////////////////////////////////////
+//  1d. Rigid-Body Dynamics                                                         //
+//  Mathematical Concepts were taken from the lecture slides, as well as            //
+//  the script "Physically Based Modeling by David Baraff from TeachCenter          //
+///////////////////////////////////////////////////////////////////////////////////////
 
-Contact::Contact(RigidBody *a, RigidBody *b, sf::Vector3f n, sf::Vector3f p) {
-    this->a = a;
-    this->b = b;
-    this->n = n;
-    this->p = p;
-}
+#include <SFML/Graphics.hpp>
+#include <cmath>
+#include "Quaternion.h"
+#include "Matrix.h"
+#include "Border.h"
+#include <vector>
+#include "math.h"
+#ifndef MAGNITY_RIGIDBODY_H
+#define MAGNITY_RIGIDBODY_H
 
-/*bool Contact::colliding(Contact& c) {
-     sf::Vector3f padot = pt_velocity(*c.a, c.p);
-     sf::Vector3f pbdot = pt_velocity(*c.b, c.p);
-     c.n = {0.0f, 1.0f, 0.0f};
-     double vrel = c.a->calcDotProd(c.n, (padot - pbdot)); //TODO: can i write - like that?
-     //std::cout << "verl Beneath: " << vrel << std::endl;
-     if(vrel > 1.0f) //moving away
-     {
-         return true;
-     }
-     else if(vrel > -1.0f) //resting contact
-     {
-         return true;
-     }
-     else {
+#define STATE_SIZE 13 //cos we use quarternions
+//TODO: Body coordinates to world coordinates
 
-        return true;
-     }
-}
+class RigidBody {
 
-void Contact::collision(Contact& c, double epsilon) {
-     sf::Vector3f padot = pt_velocity(*c.a, c.p);
-     sf::Vector3f pbdot = pt_velocity(*c.b, c.p);
-     c.n = {0.0f, 1.0f, 0.0f};
-     sf::Vector3f n = c.n;
-     sf::Vector3f ra = p - c.a->x;
-     sf::Vector3f rb = p - c.b->x;
-     double vrel = RigidBody::calcDotProd(n, padot - pbdot);
+public:
+    RigidBody(float mass, float density, unsigned int type, float width, float height, const sf::Texture& texture,
+              bool fixed, float posX, float posY);
 
-     vrel = -2.0f;
-     double numerator = -(1 + epsilon) * vrel;
+    static double calcMagnitude(sf::Vector3f vec);
+    static sf::Vector3f calcCrossProd(sf::Vector3f vec1, sf::Vector3f vec2);
+    static void ComputeForceAndTorque(RigidBody *rb);
+    Matrix calcIbody() const;
+    Matrix calcIinversebody();
+    static void DisplayBodies(sf::RenderWindow &window, std::vector<RigidBody*> *rigid_bodies);
+    static void ode(std::vector<RigidBody*> *y0, std::vector<RigidBody> *yEnd, int len, double t0, double t1);
+    sf::Vector3f normalizeVector(sf::Vector3f vec);
+    void checkForCollisions(std::vector<RigidBody*>* rigid_bodies, std::vector<Border*> obstacles);
+    static void applyVelocityVerletIntegration(RigidBody* rigid_body0, RigidBody* rigid_body1, double timestep);
 
-     //Calculate denominator in four parts
-     double term1 = 1.0f / c.a->mass;
-     double term2 = 1.0f / c.b->mass;
-     double term3 = RigidBody::calcDotProd(n,
-                                      (RigidBody::calcCrossProd(RigidBody::calcMatrixMult(c.a->Iinv, RigidBody::calcCrossProd(ra, n)), ra)));
-     double term4 = RigidBody::calcDotProd(n,
-                                     (RigidBody::calcCrossProd(RigidBody::calcMatrixMult(c.b->Iinv, RigidBody::calcCrossProd(rb, n)), rb)));
+    //state variables
+    float width;
+    float height;
+    float mass; //mass of object
+    sf::Vector3f linear_acceleration; //linear acceleration of object
+    float angular_acceleration; //angular acceleration of object
+    sf::Vector3f x; //Position x(t)
+    sf::Vector3f P; //P(t) linear momentum
+    Quaternion q;
+    sf::Vector3f v; //v(t) linear velocity
+    float L; //L(t) angular momentum
+    float w; //w(t) angular velocity
+    sf::Vector3f force; //Sum of forces on object
+    float torque; //Torque - spin
+    sf::Vector3f torque_vec; //Torque - spin
+    std::vector<std::pair<sf::Vector3f, sf::Vector3f>> force_points;
+    float Inertia;
+    Matrix Ibody;
+    bool fixed;
+    sf::RectangleShape body;
+    unsigned int type;
+    float radius;
+private:
 
-     //Compute the impulse magnitude
-     double j = numerator / (term1 + term2 + term3 + term4);
-     sf::Vector3f force = sf::Vector3f((float)(n.x * j), (float)(n.y * j), (float)(n.z * j));
+    ////spatial variables
+    //Center of mass at (0,0,0)
+    //Rotation matrix R(t) = 3x3 matrix
+    //center of mass in body space = (0,0,0) in world space = ?
+    //R(t)r -> r is fixed vector in body space
+    //a body space point p0 is in world space p(t) = R(t) * p0 + x(t)
+    //Center of mass in world space = x(t)
+    //R(t) in body space can be (1,0,0) für x-axis, (0,1,0) für y-axis, (0,0,1) for z-axis is FIXED
+    //R(t) in world space = (rxx, rxy, rxz) for x-axis, (ryx, ryy, ryz) for y-axis, (rzx, rzy, rzz) for z-axis
+    //If you want to get the axis in real world compute for x' = R(t) * x usw.
 
-     //Apply the impulse to the bodies
-     c.a->P += force;
-     c.b->P -= force;
-     c.a->L += RigidBody::calcCrossProd(ra, force);
-     c.b->L -= RigidBody::calcCrossProd(rb, force);
+    ////linear velocity
+    //we now need to calculate x.(t) = velocity of center of mass in world space = v(t) = linear velocity
+    //in body space, the orientation (=rotation) is FIXED, therefor body can in body space only be translated
+    // v(t) = d/dt x(t)
 
-     //recompute auxiliary variables
-     c.a->v = sf::Vector3f((float)(c.a->P.x / c.a->mass), (float)(c.a->P.y / c.a->mass), (float)(c.a->P.z / c.a->mass));
-     c.b->v = sf::Vector3f((float)(c.b->P.x / c.b->mass), (float)(c.b->P.y / c.b->mass), (float)(c.b->P.z / c.b->mass));
-     c.a->omega = RigidBody::calcMatrixMult(c.a->Iinv, c.a->L);
-     c.b->omega = RigidBody::calcMatrixMult(c.b->Iinv, c.b->L);
-}
+    ////angular velocity
+    //If there is rotation/spin, position of center of mass stays the same because we spin about
+    //an axis that passes through center of mass
+    //spin = w(t)
+    //direction of w(t) = direction of axis, about which body is spinning
+    //length/magnitude of w(t) = how fast body is spinning in revolution/time
+    //we need a R.(t) = w(t) * R(t)
 
-void Contact::FindAllCollisions(Contact& contact, int ncontacts) {
+    ////mass of body
+    //imagine body consists of a large number of particles 1 to N
+    //particle has body space coordinate r0i and thats in world space
+    //ri(t) = R(t) * r0i + x(t)
+    //Total mass of Body = M = Sum of mi -> sum of all masses of particles
 
-     bool had_collision;
-     double epsilon = 0.5;
+    ////Velocity of a Particle
+    //we now need the velocity of a particle ri
+    // = ri(t) = w(t) x (ri(t) - x(t)) + v(t) -> has linear and angular component
 
-    // do {
-         had_collision = false;
+    ////Center of Mass
+    //Center of Mass of a body in world space = (Sum(mi * ri(t)) / M
+    //in Body space = (0,0,0)
 
-         for(int i = 0; i < ncontacts; i++) {
-             if(colliding(contact)) {
-                 collision(contact, epsilon);
-                 had_collision = true;
+    ////Force and Torque
+    //Fi(t) = total external forces acting on ith particle at time t
+    //Ti(t) = (ri(t) - x(t)) x Fi(t) = external torque acting on the ith particle
+    //Torque is direction that represents axis the body would spin around due to force F if center of mass stays the same
+    //Total force F(t) = Sum of all forces Fi(t)
+    //Total external torque = Sum of( (ri(t) - x(t)) x Fi(t) )
 
-                 //Tell the solver we had a collision
-                 //ode_discontinues(); //TODO: what is that?
-             }
-         }
-     //} while(had_collision);
-}
+    ////Linear Momentum
+    //linear momentum p = m * v (mass * velocity) of one particle
+    //Total linear momentum of body = P(t) = M * v(t)
+    //Therefor P.(t) = F(t)
 
-void Contact::computeContactForces(Contact *contacts, int ncontacts, double t) {
-     //we assume that every element of contacts[] represents a contact in resting contact
-     //Also we assume that for each element in rigid_bodies[] the force and torque fileds
-     //have been set to the net external force and torque acting on the body due to gravity,
-     //wind etc. perhaps by a call to//computeExternalForceAndTorqueForAllBodies(t); //TODO: implement this method?
+    ////Angular Momentum
+    //Total angular momentum L(t) = I(t) * w(t)
+    //I = inertia tensor = 3x3 matrix - describes how mass is distributed in body relative to
+    //the center of mass. I depend on the orientation of the body but not on translation
+    //L.(t) = T(t) -> therefor also P.(t)  = F(t)
 
-     //allocate nxn matrix amat and n-vectors fvec and bvec
+    ////Inertia Tensor
+    //is scaling factor between angular momentum and angular velocity
+    //r'(t) is the displacement of the ith particle from center of mass x(t)
+    //r'(t) = ri(t) - x(t)
+    //I(t) = Sum of( mi * ( (ri'^T * ri') * 3x3 Einheitsmatrix - ri' * ri'^T )
+    //Declare Ibody = Sum of( mi * ( (r0i^T * r0i) * 3x3 Einheitsmatrix - r0i * r0i^T ) -> this is in body space
+    //Compute Ibody at beginning because this stays the same all the time
+    //Then I(t) = R(t) * Ibody * R(t)^T
 
-    std::vector<std::vector<double>> *amat;
-     //Matrix *amat = new Matrix(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-     std::vector<double> *bvec = new std::vector<double>(ncontacts); //TODO: is this really filled with doubles?
-     std::vector<double> *fvec = new std::vector<double>(ncontacts); //TODO: is this really filled with doubles?
+    ////Rigid Body Equations of Motion
+    //Now we can define the state Vector X(t) =
+    //
+    //                  | x(t) center of mass   |
+    //                  | R(t) rotation matrix  |
+    //                  | P(t) linear momentum  |
+    //                  | L(t) angular momentum |
+    //
+    // in each step calculate I(t), w(t) and v(t)
+    // v(t) = P(t) / M      I(t) = R(t) * Ibody * R(t)^T        w(t) = I(t)^-1 * L(t)
+    //
+    // Derivative d/dt X(t) is:
+    //
+    //                  | x(t) center of mass   |       | v(t) linear velocity |
+    //               d  | R(t) rotation matrix  |  =    | w(t) * R(t)          |
+    //              dt  | P(t) linear momentum  |       | F(t) sum of forces   |
+    //                  | L(t) angular momentum |       | T(t) torque          |
+    //
+    //// !Remark: Instead of using R(t) it is better to use quaternions
 
-     //compute aij and bi coefficients
-     compute_a_matrix(contacts, ncontacts, *amat);
-     compute_b_vector(contacts, ncontacts, *bvec);
+    ////Quaternions
+    //s + vxi + vyj + yzk = [s, v]
+    //[s1, v1] * [s2, v2] = [s1 * s2 - v1 • v2,  s1 * v2 + s2 * v1 + v1 x v2]
+    //unit quaternion: [cos(theta / 2), sin/theta / 2) * u] -> u = unit axis where body rotates around
+    //q1 * q2 means first rotation q1 followed by rotation q2
+    //q.(t) = 1/2 * w(t) * q(t) -> (w(t) * q(t) = [0,w(t)] * [s,v])
+};
 
-     //solve for fj's
-     //qp_solve(*amat, *bvec, *fvec);
 
-     //Now add the resting contact forces we jsut computed into the force and torque field of each body
-     for(int i = 0; i < ncontacts; i++) {
-         double f = fvec->at(i); //fi
-         sf::Vector3f n = contacts[i].n;
-         RigidBody *A = contacts[i].a;
-         RigidBody *B = contacts[i].b;
-
-         //apply the force f n positively to A
-         A->force += sf::Vector3f(n.x * f, n.y * f, n.z * f);
-         A->torque += sf::Vector3f((contacts[i].p - A->x).x * sf::Vector3f(n.x * f, n.y * f, n.z * f).x,
-                                   (contacts[i].p - A->x).y * sf::Vector3f(n.x * f, n.y * f, n.z * f).y,
-                                   (contacts[i].p - A->x).z * sf::Vector3f(n.x * f, n.y * f, n.z * f).z);
-
-         //and negatively to B
-         B->force -= sf::Vector3f(n.x * f, n.y * f, n.z * f);
-         B->torque -=  sf::Vector3f((contacts[i].p - B->x).x * sf::Vector3f(n.x * f, n.y * f, n.z * f).x,
-                                    (contacts[i].p - B->x).y * sf::Vector3f(n.x * f, n.y * f, n.z * f).y,
-                                    (contacts[i].p - B->x).z * sf::Vector3f(n.x * f, n.y * f, n.z * f).z);
-     }
-}
-
-sf::Vector3f Contact::computeNdot(Contact *c) {
-     if(c->vf) //vertex/face contact
-     {
-         //the vector n is attached to B so..
-         return c->a->calcCrossProd(c->b->omega, c->n);
-     }
-     else {
-         sf::Vector3f eadot = c->a->calcCrossProd(c->a->omega, c->ea);
-         sf::Vector3f ebdot = c->a->calcCrossProd(c->b->omega, c->eb);
-         sf::Vector3f n1 =  c->a->calcCrossProd(c->ea, c->eb); //TODO is this really a cross product?
-         sf::Vector3f z = c->a->calcCrossProd(eadot, eb) + c->a->calcCrossProd(ea, ebdot);
-         double l = c->a->calcMagnitude(n1);
-         n1 = c->a->calcDivScalar(n1, l);
-
-         return (z - (c->a->calcDivScalar(c->a->calcCrossProd(c->a->calcCrossProd(z, c->n), c->n),  l)));
-     }
-}
-
-void Contact::compute_b_vector(Contact *contacts, int ncontacts, std::vector<double> &b) {
-     for(int i = 0; i < ncontacts; i++) {
-         Contact *c = &contacts[i];
-         RigidBody *A = c->a;
-         RigidBody *B = c->b;
-         sf::Vector3f n = c->n;
-         sf::Vector3f ra = c->p - A->x;
-         sf::Vector3f rb = c->p - B->x;
-
-         //Get the external forces and torques
-         sf::Vector3f f_ext_a = A->force;
-         sf::Vector3f f_ext_b = B->force;
-         sf::Vector3f t_ext_a = A->torque;
-         sf::Vector3f t_ext_b = B->torque;
-
-         sf::Vector3f a_ext_part, a_vel_part, b_ext_part, b_vel_part;
-
-         //compute the part of p..a(t0) due to the external force and torque
-         a_ext_part = sf::Vector3f(f_ext_a.x / A->mass, f_ext_a.y / A->mass, f_ext_a.z / A->mass)
-                 + c->a->calcCrossProd(c->a->calcMatrixMult(A->Iinv, t_ext_a), ra);
-         b_ext_part = sf::Vector3f(f_ext_b.x / B->mass, f_ext_b.y / B->mass, f_ext_b.z / B->mass)
-                      + c->a->calcCrossProd(c->a->calcMatrixMult(B->Iinv, t_ext_b), rb);
-
-         //Compute the part of p..a(to) due to velocity
-         a_vel_part = c->a->calcCrossProd(A->omega, (c->a->calcCrossProd(A->omega, ra))) +
-                 c->a->calcCrossProd((c->a->calcMatrixMult(A->Iinv, (c->a->calcCrossProd(A->L, A->omega)))), ra);
-         b_vel_part = c->b->calcCrossProd(B->omega, (c->b->calcCrossProd(B->omega, rb))) +
-                      c->b->calcCrossProd((c->b->calcMatrixMult(B->Iinv, (c->b->calcCrossProd(B->L, B->omega)))), rb);
-
-         //combine the above results and dot with nî(t0)
-         double k1 = c->a->calcDotProd(((a_ext_part + a_vel_part) - (b_ext_part + b_vel_part)), n);
-         sf::Vector3f ndot = computeNdot(c);
-         double k2 = c->a->calcDotProd(sf::Vector3f(ndot.x * 2, ndot.y * 2, ndot.z * 2),
-                                 ((pt_velocity(*A, c->p) - pt_velocity(*B, c->p))));
-
-         b[i] = k1 + k2;
-
-     }
-}
-
-void Contact::compute_a_matrix(Contact *contacts, int ncontacts, std::vector<std::vector<double>> &a) {
-     for(int i = 0; i < ncontacts; i++) {
-         for(int j = 0; j < ncontacts; j++) {
-             a.at(i).at(j) = compute_aij(contacts[i], contacts[j]);
-         }
-     }
-}
-
-double Contact::compute_aij(Contact ci, Contact cj) {
-     //if the bodies involved in the ith and jth contact are distinct, then aij is zero
-     if((ci.a != cj.a) && (ci.b != cj.b) && (ci.a != cj.b) && (ci.b != cj.a)) {
-         return 0.0;
-     }
-
-     RigidBody *A = ci.a;
-     RigidBody *B = ci.b;
-     sf::Vector3f ni = ci.n;
-     sf::Vector3f nj = cj.n;
-     sf::Vector3f pi = ci.p;
-     sf::Vector3f pj = cj.p;
-     sf::Vector3f ra = pi - A->x;
-     sf::Vector3f rb = pi - B->x;
-
-     sf::Vector3f force_on_a = sf::Vector3f(0.0f, 0.0f, 0.0f);
-     sf::Vector3f torque_on_a = sf::Vector3f(0.0f, 0.0f, 0.0f);
-
-     if(cj.a == ci.a) {
-         //force direction of jth contact force on A
-         force_on_a = nj;
-         //torque direction
-         torque_on_a = ci.a->calcCrossProd(pj - A->x, nj);
-     } else if(cj.b == ci.a) {
-         force_on_a = sf::Vector3f(nj.x * -1, nj.y * -1, nj.z * -1);
-         torque_on_a = ci.a->calcCrossProd(pj - A->x, nj);
-     }
-
-     sf::Vector3f force_on_b = sf::Vector3f(0.0f, 0.0f, 0.0f);
-     sf::Vector3f torque_on_b = sf::Vector3f(0.0f, 0.0f, 0.0f);
-
-     if(cj.a == ci.b) {
-         //force direction of jth contact force on A
-         force_on_b = nj;
-         //torque direction
-         torque_on_b = ci.b->calcCrossProd(pj - B->x, nj);
-     } else if(cj.b == ci.b) {
-         force_on_b = sf::Vector3f(nj.x * -1, nj.y * -1, nj.z * -1);
-         torque_on_b = ci.b->calcCrossProd(pj - B->x, nj);
-     }
-
-     //Now compute how the jth contact force affects the linear and angular acceleration of the
-     //contact point on body A
-     sf::Vector3f a_linear = sf::Vector3f(force_on_a.x / A->mass, force_on_a.y / A->mass, force_on_a.z / A->mass);
-     sf::Vector3f a_angular = ci.a->calcCrossProd(ci.a->calcMatrixMult(A->Iinv, torque_on_a), ra);
-     //Same for B
-     sf::Vector3f b_linear = sf::Vector3f(force_on_b.x / B->mass, force_on_b.y / B->mass, force_on_b.z / B->mass);
-     sf::Vector3f b_angular = ci.b->calcCrossProd(ci.b->calcMatrixMult(B->Iinv, torque_on_b), rb);
-
-     return ci.a->calcDotProd(ni, ((a_linear + a_angular) - (b_linear + b_angular)));
-}
-
-//TODO: can i make + like that?
-sf::Vector3f Contact::pt_velocity(RigidBody& body, sf::Vector3f& p) {
-    if(body.fixed){
-        return sf::Vector3f(0.0f, 0.0f, 0.0f);
-    }
-    else {
-        return body.v + body.calcCrossProd(body.omega, sf::Vector3f(p.x - body.world_coord.x, p.y - body.world_coord.y, p.z - body.world_coord.z));
-    }
-}
-*/
-//-------------------------------Different approach -------------------------------------------------------------------
-
-// Detect a collision between two rigid bodies and apply the necessary impulses
-void Contact::DetectAndResolveCollision(Contact& contact) {
-
-    //sf::Vector3f tmp = contact.a->calcCrossProd((contact.p - contact.a->world_coord), (contact.p - contact.b->world_coord));
-    //tmp.z = 1;
-    // Calculate the contact point and normal
-    sf::Vector3f normal = contact.a->normalizeVector(contact.b->world_coord - contact.a->world_coord);
-    contact.n = normal;
-
-    // Calculate and apply the impulses to resolve the collision
-    sf::Vector3f impulse = contact.CalculateImpulse(contact);
-
-    // exit(0);
-    contact.ApplyImpulse(*contact.a, impulse, contact);
-    contact.ApplyImpulse(*contact.b, (impulse * -1.0f), contact);
-}
-
-sf::Vector3f Contact::CalculateImpulse(Contact &contact) { //THIS
-
-    float e = 0.8f; // coefficient of restitution
-    double j = (-(1.0f + e) * contact.a->calcDotProd(CalculateRelativeVelocity(contact),contact.n))
-               /
-               ((1.0f / contact.a->mass) + (1.0f / contact.b->mass));
-
-    return {(float)(contact.n.x * j), (float)(contact.n.y * j), float(contact.n.z * j)};
-}
-
-void Contact::ApplyImpulse(RigidBody &body, const sf::Vector3f & impulse, Contact& contact) {
-    body.P.x += impulse.x;
-    body.P.y += impulse.y;
-    body.P.z += impulse.z;
-    body.L += body.calcCrossProd((contact.p - body.world_coord), impulse);
-    body.v = body.calcDivScalar(body.P, body.mass);
-    body.omega = body.calcMatrixMult(body.Iinv, body.L);
-}
-
-sf::Vector3f Contact::CalculateRelativeVelocity(Contact& contact) {
-    sf::Vector3f r1 = contact.p;
-    sf::Vector3f v1 = contact.a->P + contact.a->calcCrossProd(contact.a->L, contact.p - contact.a->world_coord);
-    sf::Vector3f v2 = contact.b->P + contact.b->calcCrossProd(contact.b->L, contact.p - contact.b->world_coord);
-
-    return v2 - v1;
-}
-
+#endif //MAGNITY_RIGIDBODY_H

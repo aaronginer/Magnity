@@ -4,7 +4,7 @@
 
 #include "Border.h"
 
-Border::Border(Texture *texture, const RectangleShape& shape, RenderWindow &window, int pos, bool fullscreen) {
+Border::Border(Texture *texture, const RectangleShape& shape, RenderWindow &window, int pos, bool fullscreen, int collisionPointDir) {
 
     switch(pos) {
         case 0: //left
@@ -55,9 +55,10 @@ Border::Border(Texture *texture, const RectangleShape& shape, RenderWindow &wind
     border.setTexture(texture);
     // border.setOrigin(border.getSize() / 2.0f);
     this->fullscreen = fullscreen;
+    this->collisionPointDir = collisionPointDir;
 }
 
-Border::Border(sf::Texture *texture, int x, int y, float height, float width) {
+Border::Border(sf::Texture *texture, int x, int y, float height, float width, int collisionPointDir) {
     border.setSize(Vector2f(height, width));
     border.setPosition(x, y);
     border.setTexture(texture);
@@ -75,4 +76,12 @@ Vector2f Border::getPosition() {
 
 void Border::Draw(RenderWindow &window) {
     window.draw(border);
+}
+
+RectangleShape Border::getShape() {
+    return this->border;
+}
+
+int Border::getCollisionPointDir() {
+    return this->collisionPointDir;
 }

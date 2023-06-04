@@ -6,18 +6,21 @@ using namespace sf;
 
 
 class Border {
-    public:
-        Border(Texture* texture, const RectangleShape& shape, RenderWindow &window, int pos,  bool fullscreen);
-        Border(Texture* texture, int x, int y, float height, float width);
-        ~Border();
-        void Draw(RenderWindow &window);
+public:
+    Border(Texture* texture, const RectangleShape& shape, RenderWindow &window, int pos,  bool fullscreen, int collisionPointDir);
+    Border(Texture* texture, int x, int y, float height, float width, int collisionPointDir);
+    ~Border();
+    void Draw(RenderWindow &window);
 
-        Vector2f getPosition();
+    Vector2f getPosition();
+    RectangleShape getShape();
+    int getCollisionPointDir();
 
-    private:
-        RectangleShape border;
-        bool fullscreen;
-        bool xORy;
+private:
+    RectangleShape border;
+    bool fullscreen;
+    bool xORy;
+    int collisionPointDir;
 };
 
 

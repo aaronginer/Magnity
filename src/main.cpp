@@ -41,6 +41,13 @@ bool gui_visible = true;
 
 RigidBody* ball_ptr;
 
+//Rigid Body Vector
+std::vector<RigidBody*> *rigid_bodies = new std::vector<RigidBody*>;
+//Borders / Fixed obstacles
+std::vector<Border*> *obstacles = new std::vector<Border*>;
+
+float total_time = 0.0f;
+
 
 void createPathInterpolationPanel(tgui::Panel::Ptr panel, sf::RenderWindow& window)
 {
@@ -204,9 +211,44 @@ void animation_loop()
 
         // printf("time_delta: %f\n", delta_time.count()/1000.f);
         s.interpolate(deltaTime);
-        RigidBody::RunSimulation(deltaTime, *mainWindow);
 
-        usleep(1000000 / animation_update_rate);
+        std::cout << std::endl;
+        //Run Rigid Body simulation
+        std::vector<RigidBody> *rigid_bodies_new = new std::vector<RigidBody>;
+        for(int i = 0; i < rigid_bodies->size(); i++) {
+            RigidBody newbody = RigidBody(
+                    rigid_bodies->at(i)->mass,2.5f,
+                    rigid_bodies->at(i)->type,rigid_bodies->at(i)->width,
+                    rigid_bodies->at(i)->height,*rigid_bodies->at(i)->body.getTexture(),
+                    rigid_bodies->at(i)->fixed,rigid_bodies->at(i)->x.x, rigid_bodies->at(i)->x.y);
+
+            rigid_bodies_new->push_back(newbody);
+
+            rigid_bodies_new->at(i).torque_vec = rigid_bodies->at(i)->torque_vec;
+            rigid_bodies_new->at(i).force_points = rigid_bodies->at(i)->force_points;
+            rigid_bodies_new->at(i).Inertia = rigid_bodies->at(i)->Inertia;
+            rigid_bodies_new->at(i).P = rigid_bodies->at(i)->P;
+            rigid_bodies_new->at(i).angular_acceleration = rigid_bodies->at(i)->angular_acceleration;
+            rigid_bodies_new->at(i).w = rigid_bodies->at(i)->w;
+            rigid_bodies_new->at(i).force = rigid_bodies->at(i)->force;
+            rigid_bodies_new->at(i).linear_acceleration = rigid_bodies->at(i)->linear_acceleration;
+            rigid_bodies_new->at(i).q = rigid_bodies->at(i)->q;
+            rigid_bodies_new->at(i).v = rigid_bodies->at(i)->v;
+            rigid_bodies_new->at(i).L = rigid_bodies->at(i)->L;
+        }
+
+        total_time += deltaTime;
+
+        RigidBody::ode(rigid_bodies, rigid_bodies_new, rigid_bodies->size(), total_time - deltaTime, total_time);
+        //rigid bodies were updated -> now check for collisions at new position
+        rigid_bodies->at(0)->checkForCollisions(rigid_bodies, *obstacles);
+
+        //delete rigid_bodies_new we don't need it anymore
+        rigid_bodies_new = nullptr;
+        delete rigid_bodies_new;
+
+        //sleep(1000000/ animation_update_rate);
+        //sleep(5);
     }
 }
 
@@ -242,6 +284,9 @@ int main()
     Texture borderTexture;
     borderTexture.loadFromFile("res/border.png");
 
+    Texture objectTexture2;
+    objectTexture2.loadFromFile("./res/object2.png");
+
     Texture objectTexture;
     objectTexture.loadFromFile("res/object.png");
 
@@ -253,11 +298,26 @@ int main()
 
     PlayerArea player1_area(&playerAreaTexture, view, 1);                                    //Player 1 Area
     PlayerArea player2_area(&playerAreaTexture, view, 2);                                    //Player 1 Area
-    Border border_area1(&borderTexture, 0, player1_area.getArea().getSize().y, player1_area.getArea().getSize().x, 10.f); //Border player 1 area
-    Border border_area2(&borderTexture, 0, view.getSize().y - player2_area.getArea().getSize().y, player1_area.getArea().getSize().x, 10.f); //Border player 2 area
-    Object object(&objectTexture);    
-    RigidBody ball(1.0f, 1.0f, 1, 20.0f, 20.0f, objectTexture, false, view.getSize().x/2, view.getSize().y/2);                                                      //Object
-    ball_ptr = &ball;
+    Border border_area1(&borderTexture, 0, player1_area.getArea().getSize().y, player1_area.getArea().getSize().x, 10.f, 0); //Border player 1 area
+    Border border_area2(&borderTexture, 0, view.getSize().y - player2_area.getArea().getSize().y, player1_area.getArea().getSize().x, 10.f, 2); //Border player 2 area
+    obstacles->push_back(&border_area1);
+    obstacles->push_back(&border_area2);
+
+    Object object(&objectTexture);
+    /*RigidBody ball(1.0f, 1.0f, 1, 20.0f, 20.0f, objectTexture, false, view.getSize().x/2, view.getSize().y/2);                                                      //Object
+    ball_ptr = &ball;*/
+
+    for(int i = 0; i < 10; i++) {
+        RigidBody* ball = new RigidBody(1.0f, 2.5f, 0, 20.0f, 20.0f, objectTexture, false,
+                                        206.0f + (i * 25), 350.0f);
+        rigid_bodies->push_back(ball);
+    }
+
+    for(int i = 0; i < 10; i++) {
+        RigidBody* ball = new RigidBody(1.0f, 2.5f, 1, 20.0f, 20.0f, objectTexture2, false,
+                                        206.0f + (i * 25), 400.0f);
+        rigid_bodies->push_back(ball);
+    }
 
     Magnet magnet1(&magnetTexture, view, 1);                                                          //Player 1
     Magnet magnet2(&magnetTexture, view, 2);                                                          //Player 2
@@ -361,7 +421,7 @@ int main()
         panel->setVisible(gui_visible);
         gui.draw();
 
-        RigidBody::DisplayBodies(*mainWindow);
+        RigidBody::DisplayBodies(*mainWindow, rigid_bodies);
         (*mainWindow).display();
     }
 
