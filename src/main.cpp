@@ -42,6 +42,8 @@ int easing = 0;
 bool gui_visible = true;
 
 
+bool game_paused = false;
+
 void createPathInterpolationPanel(tgui::Panel::Ptr panel, sf::RenderWindow& window)
 {
 
@@ -219,6 +221,11 @@ void animation_loop()
 
     while((*mainWindow).isOpen())
     {
+        if (game_paused) {
+            clock.restart().asSeconds();
+            continue;
+        }
+        
         deltaTime = clock.restart().asSeconds();
 
         pdyn.update(deltaTime);
@@ -314,6 +321,13 @@ int main()
             {
                 (*mainWindow).close();
             }
+            else if (event.type == sf::Event::KeyPressed)
+            {
+                if (event.key.code == Keyboard::Key::Escape)
+                {
+                    game_paused = !game_paused;
+                }
+            }
             else if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
             {
                 sf::Vector2f mouse = mainWindow->mapPixelToCoords(sf::Mouse::getPosition(*mainWindow));
@@ -351,6 +365,8 @@ int main()
             s.ctrl_points_[ctrl_point_to_drag_idx] = mouse;
             s.init();
         }
+
+        if (game_paused) continue;
 
         //keyboard input player 1
         if(Keyboard::isKeyPressed(Keyboard::Key::A)) {
