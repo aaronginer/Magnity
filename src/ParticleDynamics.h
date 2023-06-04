@@ -31,6 +31,12 @@ enum ForceType {
     Constant
 };
 
+enum VectorFieldFunction {
+    Sin,
+    NegSin,
+    Defined
+};
+
 class ForceSource {
 public:
     ForceType type;
@@ -40,6 +46,8 @@ public:
     float m;
     // constant force
     sf::Vector2f F_ = {0, 0};
+
+    VectorFieldFunction vf_func;
 
     ForceSource(ForceType type, sf::Vector2f x, float m)
     {
@@ -54,6 +62,19 @@ public:
         this->F_ = F;
     }
 
+    ForceSource(ForceType type, VectorFieldFunction vf_func)
+    {
+        this->type = type;
+        this->vf_func = vf_func;
+    }
+
+    ForceSource(ForceType type, VectorFieldFunction vf_func, float strength)
+    {
+        this->type = type;
+        this->vf_func = vf_func;
+        this->m = strength;
+    }
+
     ForceSource(ForceType type)
     {
         this->type = type;
@@ -66,6 +87,9 @@ public:
 
 class ParticleDynamics {
 public:
+    static bool draw_trails;
+    static bool draw_ff;
+    
     bool rk4 = false;
 
     ParticleDynamics(bool rk4) { this->rk4 = rk4; }
@@ -86,6 +110,6 @@ public:
     void draw(sf::RenderWindow& window);
 
     void drawTrail(sf::RenderWindow& window);
-    void drawForceField(sf::RenderWindow& window);
+    void drawForceField(sf::RenderWindow& window, float object_mass=10.f);
     void drawArrow(sf::RenderWindow& window, sf::Texture& tex, sf::Vector2f position, sf::Vector2f F);
 };

@@ -29,7 +29,7 @@ std::thread animation_loop_thread;
 
 
 Spline s({{200, 200}, {250, 200}, {250, 500}, {500, 500}, {500, 200}, {550, 200}});
-ParticleDynamics pdyn(false);
+ParticleDynamics pdyn(true);
 
 bool dragging_ctrl_point = false;
 sf::Sprite* ctrl_point_to_drag;
@@ -46,7 +46,7 @@ void createPathInterpolationPanel(tgui::Panel::Ptr panel, sf::RenderWindow& wind
 {
 
     tgui::Label::Ptr traversalSpeedLabel = tgui::Label::create();
-    traversalSpeedLabel->setText("Traversal Speed:");
+    traversalSpeedLabel->setText("PI: Traversal Speed:");
     traversalSpeedLabel->setPosition(220, 10);
     traversalSpeedLabel->setTextSize(16);
 
@@ -134,7 +134,7 @@ void createPathInterpolationPanel(tgui::Panel::Ptr panel, sf::RenderWindow& wind
 
     // Create the Draw Curve button
     tgui::Button::Ptr drawCurveButton = tgui::Button::create();
-    drawCurveButton->setText("Draw Curve");
+    drawCurveButton->setText("PI: Draw Curves");
     drawCurveButton->setSize(200, 30);
     drawCurveButton->setPosition(10, 100);
     drawCurveButton->onPress.connect([&]() { s.draw_curve_ = !s.draw_curve_; });
@@ -143,7 +143,7 @@ void createPathInterpolationPanel(tgui::Panel::Ptr panel, sf::RenderWindow& wind
 
     // Create the Draw Controls button
     tgui::Button::Ptr drawControlsButton = tgui::Button::create();
-    drawControlsButton->setText("Draw Control Points and Arc-Length Table samples");
+    drawControlsButton->setText("PI: Draw Control Points and Arc-Length Table samples");
     drawControlsButton->setSize(400, 30);
     drawControlsButton->setPosition(10, 140);
     drawControlsButton->onPress.connect([&]() { s.draw_ctrl_and_arc_ = !s.draw_ctrl_and_arc_; });
@@ -164,6 +164,25 @@ void createPathInterpolationPanel(tgui::Panel::Ptr panel, sf::RenderWindow& wind
 
     panel->add(easingComboBox);
 
+    // Create the Draw Controls button
+    tgui::Button::Ptr drawParticleTrailsButton = tgui::Button::create();
+    drawParticleTrailsButton->setText("PD: Draw trails");
+    drawParticleTrailsButton->setSize(400, 30);
+    drawParticleTrailsButton->setPosition(10, 220);
+    drawParticleTrailsButton->onPress.connect([&]() { ParticleDynamics::draw_trails = !ParticleDynamics::draw_trails; });
+
+    panel->add(drawParticleTrailsButton);
+
+    // Create the Draw Controls button
+    tgui::Button::Ptr drawParticleFFButton = tgui::Button::create();
+    drawParticleFFButton->setText("PD: Draw force-field");
+    drawParticleFFButton->setSize(400, 30);
+    drawParticleFFButton->setPosition(10, 250);
+    drawParticleFFButton->onPress.connect([&]() { ParticleDynamics::draw_ff = !ParticleDynamics::draw_ff; });
+
+    panel->add(drawParticleFFButton);
+
+    // panel sizing
     sf::Vector2f panelSize(0, 0);
     for (const auto& widget : panel->getWidgets())
     {
@@ -204,7 +223,7 @@ void animation_loop()
 
         pdyn.update(deltaTime);
         // printf("time_delta: %f\n", delta_time.count()/1000.f);
-        // s.interpolate(deltaTime);
+        s.interpolate(deltaTime);
         // RigidBody::RunSimulation(deltaTime, *mainWindow);
 
         // subtract time needed for calculations
@@ -223,14 +242,14 @@ int main()
     tgui::GuiSFML gui(*mainWindow);
 
     // Create a panel to serve as the background of the GUI
-    /*tgui::Panel::Ptr panel = tgui::Panel::create();
+    tgui::Panel::Ptr panel = tgui::Panel::create();
     panel->setSize("100%", "100%");
     panel->getRenderer()->setBackgroundColor(sf::Color(0, 0, 255, 128));
     gui.add(panel);
 
     createPathInterpolationPanel(panel, *mainWindow);
     createToggleButtons(panel, gui);
-    */
+    
     // OBJECTS
 
     //------------------------------------- Textures -------------------------------------//
@@ -274,19 +293,15 @@ int main()
     p1.sprite.setScale({0.01f, 0.01f});
     ForceSource f(ForceType::AntiGravity, view.getCenter(), 50000);
     ForceSource f1(ForceType::Gravity, view.getCenter(), 50000);
-    ForceSource f_c(ForceType::Constant, sf::Vector2f(0, 200));
+    ForceSource f_c(ForceType::Constant, sf::Vector2f(200, 0));
+    // ForceSource f_c2(ForceType::VectorField, VectorFieldFunction::Defined, 100);
     //ForceSource f(ForceType::Gravity, view.getCenter()+sf::Vector2f(100, 0), 50000);
-    //ForceSource f2(view.getCenter()+sf::Vector2f(0, 100), 1);
-    //ForceSource f3(ForceType::Gravity, view.getCenter()+sf::Vector2f(-100, 0), 50000);
-    //ForceSource f4(ForceType::Gravity, view.getCenter()+sf::Vector2f(0, -200), 50000);
+
     pdyn.addParticle(p1);
     pdyn.addForceSource(&f);   
     pdyn.addForceSource(&f1);  
-    pdyn.addForceSource(&f_c);   
-    //pdyn.addForceSource(f2);   
-    //pdyn.addForceSource(f3);   
-    //pdyn.addForceSource(f4);                                                //Player 2
-    
+    pdyn.addForceSource(&f_c); 
+    // pdyn.addForceSource(&f_c2);   
 
     animation_loop_thread = std::thread(animation_loop);
 
@@ -377,16 +392,16 @@ int main()
         sf::Vector2i mousePos = Mouse::getPosition(*mainWindow);
         f.x = {(float) mousePos.x, (float) mousePos.y};
 
-        // s.drawObject();
-        // s.drawCurve();
-        // s.drawControlPoints();
-        // s.drawArcSamples();
+        s.drawObject();
+        s.drawCurve();
+        s.drawControlPoints();
+        s.drawArcSamples();
 
         pdyn.draw(*mainWindow);
-        // pdyn.drawTrail(*mainWindow);
+        pdyn.drawTrail(*mainWindow);
         pdyn.drawForceField(*mainWindow);
 
-        // panel->setVisible(gui_visible);
+        panel->setVisible(gui_visible);
         gui.draw();
 
         // RigidBody::DisplayBodies(*mainWindow);

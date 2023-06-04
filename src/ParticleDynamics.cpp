@@ -50,7 +50,19 @@ sf::Vector2f ForceSource::getForce(ParticleState& s)
         }
         case ForceType::VectorField:
         {
-            return {0, 0};
+            switch (vf_func)
+            {
+                /*case Sin:
+                    return {20*s.m, (float) 100*sin(s.x.x/100)*s.m};
+                case NegSin:
+                    return {-20*s.m, (float) 100*sin(s.x.x/100)*s.m};*/
+                case Defined:
+                {
+                    return {0, m * ((int)(s.x.x / 100) % 2 == 0 ? -1 : 1)};
+                }   
+                default:
+                    return {m, m};
+            }
         }
         case ForceType::Constant:
         {
@@ -73,6 +85,9 @@ void ForceSource::draw(sf::RenderWindow& window)
     c.setRadius(10);
     window.draw(c);
 }
+
+bool ParticleDynamics::draw_trails = false;
+bool ParticleDynamics::draw_ff = false;
 
 void ParticleDynamics::updateForce(ParticleState& s)
 {
@@ -155,18 +170,22 @@ void ParticleDynamics::draw(sf::RenderWindow& window)
     }
 }
 
+#define SAMPLES 15
 void ParticleDynamics::drawTrail(sf::RenderWindow& window)
 {
+    if (!ParticleDynamics::draw_trails) return;
+
     for (Particle& p : particles)
     {
         ParticleState s = p.state;
-        for (int i = 0; i < 6; i++)
+        particleUpdate(s, -SAMPLES*0.05);
+        for (int i = -SAMPLES; i <= SAMPLES; i++)
         {
-            particleUpdate(s, -0.2f*i);
+            particleUpdate(s, 0.05);
 
             sf::CircleShape circle;
             circle.setRadius(2);
-            circle.setFillColor(sf::Color::Blue);
+            circle.setFillColor(i < 0 ? sf::Color::Red : sf::Color::Blue);
             circle.setPosition(s.x);
             window.draw(circle);
         }
@@ -177,8 +196,10 @@ void ParticleDynamics::drawTrail(sf::RenderWindow& window)
 #define SAMPLES_PER_UNIT 3
 #define DBS ((int) (UNIT/SAMPLES_PER_UNIT)) // distance between sample
 
-void ParticleDynamics::drawForceField(sf::RenderWindow& window)
+void ParticleDynamics::drawForceField(sf::RenderWindow& window, float object_mass)
 {
+    if (!ParticleDynamics::draw_ff) return;
+
     sf::Texture arrow_tex;
     arrow_tex.loadFromFile("res/arrow_red.png");
 
@@ -186,7 +207,7 @@ void ParticleDynamics::drawForceField(sf::RenderWindow& window)
     int samples_y = (window.getSize().y / UNIT) * SAMPLES_PER_UNIT;
 
     ParticleState s;
-    s.m = 1;
+    s.m = object_mass;
 
     for (int x = 0; x < samples_x; x++)
     {
