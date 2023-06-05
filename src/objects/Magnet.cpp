@@ -1,6 +1,8 @@
 #include "Magnet.h"
 #include "cmath"
 
+#define M_PI 3.14159265358979323846
+
 Magnet::Magnet(sf::Texture& texture, sf::Vector2f position, int player) : SpriteObject(texture, position) {
     
     setScale({0.1f, 0.1f});
