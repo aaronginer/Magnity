@@ -1,5 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include "assert.h"
+#include "objects/SpriteObject.h"
 #include <mutex>
 
 #ifndef MAGNITY_PATH_H
@@ -34,7 +35,7 @@ class Spline
     public:
         std::vector<sf::Vector2f> ctrl_points_;
         std::vector<SplineSegment> segments_;
-        float time_;
+        float time_ = 0.0f;
         sf::Vector2f current_pos_;
 
         float total_length_ = 0;
@@ -42,6 +43,7 @@ class Spline
 
         sf::Texture ctrl_texture_;
         std::vector<sf::Sprite> ctrl_sprites_;
+        SpriteObject* sprite_;
 
         std::mutex mutex_;
 
@@ -51,7 +53,9 @@ class Spline
 
         static int easing_option_;
 
-        Spline(std::vector<sf::Vector2f> ctrl_points);
+        Spline(std::vector<sf::Vector2f> ctrl_points, sf::Texture& texture, bool circular=false);
+
+        ~Spline() { delete sprite_; }
 
         void init();
         void initSegments();

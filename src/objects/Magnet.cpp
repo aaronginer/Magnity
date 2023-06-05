@@ -11,7 +11,7 @@ Magnet::~Magnet() {
 
 }
 
-void Magnet::setFollowObject(Particle* follow_object)
+void Magnet::setFollowObject(GameObject* follow_object)
 {
     this->follow_object_ = follow_object;
 }
@@ -20,7 +20,7 @@ void Magnet::updateRotation()
 {
     if (this->follow_object_ == nullptr) return;
 
-    sf::Vector2f v = follow_object_->sprite.getPosition() - getPosition();
+    sf::Vector2f v = follow_object_->getPosition() - getPosition();
     float rotation = atan2(v.y, v.x) * 180/M_PI;
 
     setRotation(rotation);

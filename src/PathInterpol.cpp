@@ -69,9 +69,21 @@ float Spline::traversal_speed_ = 4.0f;
 
 int Spline::easing_option_ = 0;
 
-Spline::Spline(std::vector<sf::Vector2f> ctrl_points)
+Spline::Spline(std::vector<sf::Vector2f> ctrl_points, sf::Texture& texture, bool circular)
 {
+    assert(ctrl_points.size() >= 4);
+
     this->ctrl_points_ = ctrl_points;
+    // add the first 3 control points to the back to create a circular spline
+    if (circular)
+    {
+        this->ctrl_points_.push_back(this->ctrl_points_[0]);
+        this->ctrl_points_.push_back(this->ctrl_points_[1]);
+        this->ctrl_points_.push_back(this->ctrl_points_[2]);
+    }
+
+    this->sprite_ = new SpriteObject(texture, {0, 0});
+    this->sprite_->setScale({0.01f, 0.01f});
 
     ctrl_texture_.loadFromFile("res/control_point.png");
     for (size_t i = 0; i < this->ctrl_points_.size(); i++)
@@ -128,17 +140,14 @@ void Spline::update(float time_delta)
     
     std::pair<int, float> interpol = searchForU(total_length_ * t);
     current_pos_ = segments_[interpol.first].getPoint(interpol.second);
-    
+
     mutex_.unlock();      
 }
 
 void Spline::drawObject()
 {
-    sf::CircleShape circle(7.0f);
-    circle.setFillColor(sf::Color::Red);
-    circle.setPosition(current_pos_ - sf::Vector2f(7, 7));
-
-    (*mainWindow).draw(circle);
+    this->sprite_->setPosition(current_pos_);
+    this->sprite_->draw(*mainWindow);
 }
 
 void Spline::drawControlPoints()

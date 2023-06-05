@@ -31,7 +31,7 @@ class Level {
         
         void updateMouseParticlePosition(sf::Vector2f new_pos);
 
-        void draw(sf::RenderWindow& renderWindow);
+        void draw(sf::RenderWindow& renderWindow, float delta_time);
 
         static Level* LoadLevel1(sf::View& view);
 };

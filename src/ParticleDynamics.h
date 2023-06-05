@@ -1,6 +1,7 @@
 #include "SFML/Graphics.hpp"
 #include "unistd.h"
-#include <queue>
+#include "objects/SpriteObject.h"
+#include <deque>
 
 #ifndef MAGNITY_PARTICLES_H
 #define MAGNITY_PARTICLES_H
@@ -21,10 +22,13 @@ public:
 
 class Particle {
 public:
-    Particle(sf::Texture& texture, sf::Vector2f x, sf::Vector2f v, float m);
+    std::deque<sf::Vector2f> position_history_;
 
-    sf::Sprite sprite;
+    SpriteObject* sprite_;
     ParticleState state;
+
+    Particle(sf::Texture& texture, sf::Vector2f x, sf::Vector2f v, float m);
+    ~Particle() { delete sprite_; }
 };
 
 enum ForceType {
@@ -92,7 +96,9 @@ class ParticleDynamics {
 public:
     static bool draw_trails;
     static bool draw_ff;
+    static int trail_seconds;
     
+    float time_since_last_recording_ = 0.0f;
     bool rk4 = false;
 
     ParticleDynamics(bool rk4) { this->rk4 = rk4; }
@@ -110,7 +116,7 @@ public:
     void update(float deltaT);
     void particleUpdate(ParticleState& p, float deltaT);
 
-    void draw(sf::RenderWindow& window);
+    void draw(sf::RenderWindow& window, float delta_time);
 
     void drawTrail(sf::RenderWindow& window);
     void drawForceField(sf::RenderWindow& window, float object_mass=10.f);

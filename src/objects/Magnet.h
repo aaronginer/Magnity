@@ -9,12 +9,12 @@ using namespace sf;
 
 class Magnet : public SpriteObject {
 public:
-    Particle* follow_object_ = nullptr;
+    GameObject* follow_object_ = nullptr;
     
     Magnet(Texture& texture, sf::Vector2f position, int player);
     ~Magnet();
 
-    void setFollowObject(Particle* follow_object);
+    void setFollowObject(GameObject* follow_object);
     void updateRotation();
     void move(sf::Vector2f mov) override;
     int player;

@@ -32,8 +32,8 @@ void Level::destroy()
         delete t;
     }
 
-    delete magnet1;
-    delete magnet2;
+    //delete magnet1;
+    //delete magnet2;
 }
 
 void Level::update(float time_delta)
@@ -57,7 +57,7 @@ void Level::updateMouseParticlePosition(sf::Vector2f new_pos)
     mouse_force->x = new_pos;
 }
 
-void Level::draw(sf::RenderWindow& renderWindow)
+void Level::draw(sf::RenderWindow& renderWindow, float delta_time)
 {
     for (Spline* s : this->splines_)
     {
@@ -67,7 +67,7 @@ void Level::draw(sf::RenderWindow& renderWindow)
         s->drawObject();
     }
 
-    this->particle_dynamics_->draw(renderWindow);
+    this->particle_dynamics_->draw(renderWindow, delta_time);
     this->particle_dynamics_->drawForceField(renderWindow);
     this->particle_dynamics_->drawTrail(renderWindow);
 
@@ -84,9 +84,6 @@ void Level::draw(sf::RenderWindow& renderWindow)
 
 Level* Level::LoadLevel1(sf::View& view)
 {
-    Spline* s = new Spline({{200, 200}, {250, 200}, {250, 500}, {500, 500}, {500, 200}, {550, 200}});
-    ParticleDynamics* pdyn = new ParticleDynamics(true);
-
     // Textures
     sf::Texture* objectTexture = new sf::Texture();
     objectTexture->loadFromFile("res/object.png");
@@ -94,9 +91,12 @@ Level* Level::LoadLevel1(sf::View& view)
     sf::Texture* magnetTexture = new sf::Texture();
     magnetTexture->loadFromFile("res/magnet.png");
 
+    Spline* s = new Spline({{500, 200}, {200, 200}, {200, 500}, {500, 500}}, *objectTexture, true);
+    ParticleDynamics* pdyn = new ParticleDynamics(true);
+
     // ParticleDynamics
     Particle* p1 = new Particle(*objectTexture, view.getCenter()-sf::Vector2f(view.getCenter().x/2, 0), {0, 0}, 10);
-    p1->sprite.setScale({0.01f, 0.01f});
+    p1->sprite_->setScale({0.01f, 0.01f});
     ForceSource* f = new ForceSource(ForceType::AntiGravity, view.getCenter(), 50000);
     ForceSource* f1 = new ForceSource(ForceType::Gravity, view.getCenter(), 50000);
     ForceSource* f_c = new ForceSource(ForceType::Constant, sf::Vector2f(200, 0));
@@ -104,7 +104,7 @@ Level* Level::LoadLevel1(sf::View& view)
     pdyn->addParticle(p1);
     pdyn->addForceSource(f);   
     pdyn->addForceSource(f1);  
-    pdyn->addForceSource(f_c);  
+    // pdyn->addForceSource(f_c);  
 
 
     // RigidBodies
@@ -118,8 +118,8 @@ Level* Level::LoadLevel1(sf::View& view)
 
     // Magnets
     l->magnet1 = new Magnet(*magnetTexture, {40, 30}, 0);
-    l->magnet1->setFollowObject(p1);
+    l->magnet1->setFollowObject(p1->sprite_);
     l->magnet2 = new Magnet(*magnetTexture, {40, 500}, 1);
-    l->magnet2->setFollowObject(p1);
+    l->magnet2->setFollowObject(p1->sprite_);
     return l;
 }

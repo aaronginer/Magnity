@@ -174,11 +174,40 @@ void createPathInterpolationPanel(tgui::Panel::Ptr panel, sf::RenderWindow& wind
 
     panel->add(drawParticleTrailsButton);
 
+    tgui::Label::Ptr trailHistoryLabel = tgui::Label::create();
+    trailHistoryLabel->setText("PI: Trail history:");
+    trailHistoryLabel->setPosition(220, 260);
+    trailHistoryLabel->setTextSize(16);
+
+    tgui::Label::Ptr trailHistoryValueLabel = tgui::Label::create();
+    trailHistoryValueLabel->setText(std::to_string(ParticleDynamics::trail_seconds));
+    trailHistoryValueLabel->setPosition(380, 260);
+    trailHistoryValueLabel->setTextSize(16);
+
+    // Create the traversal speed slider and text field
+    tgui::Slider::Ptr trailHistorySlider = tgui::Slider::create();
+    trailHistorySlider->setMinimum(1);
+    trailHistorySlider->setMaximum(10);
+    trailHistorySlider->setStep(1);
+    trailHistorySlider->setValue(ParticleDynamics::trail_seconds);
+    trailHistorySlider->setSize(200, 20);
+    trailHistorySlider->setPosition(10, 260);
+    trailHistorySlider->onValueChange.connect([trailHistoryValueLabel](int value)
+    { 
+        printf("%d\n", value);
+        ParticleDynamics::trail_seconds = value; 
+        trailHistoryValueLabel->setText(std::to_string(ParticleDynamics::trail_seconds));
+    });
+
+    panel->add(trailHistoryLabel);
+    panel->add(trailHistoryValueLabel);
+    panel->add(trailHistorySlider);
+
     // Create the Draw Controls button
     tgui::Button::Ptr drawParticleFFButton = tgui::Button::create();
     drawParticleFFButton->setText("PD: Draw force-field");
     drawParticleFFButton->setSize(400, 30);
-    drawParticleFFButton->setPosition(10, 250);
+    drawParticleFFButton->setPosition(10, 290);
     drawParticleFFButton->onPress.connect([&]() { ParticleDynamics::draw_ff = !ParticleDynamics::draw_ff; });
 
     panel->add(drawParticleFFButton);
@@ -286,8 +315,12 @@ int main()
 
     animation_loop_thread = std::thread(animation_loop);
 
+    float deltaTime = 0.0f;
+    Clock clock;
     while ((*mainWindow).isOpen())
     {
+        deltaTime = clock.restart().asSeconds();
+
         sf::Event event;
         while ((*mainWindow).pollEvent(event))
         {
@@ -373,7 +406,7 @@ int main()
         if (current_level != nullptr)
         {
             current_level->updateMouseParticlePosition({(float) mousePos.x, (float) mousePos.y});
-            current_level->draw(*mainWindow);
+            current_level->draw(*mainWindow, deltaTime);
         }
 
         panel->setVisible(gui_visible);

@@ -28,5 +28,7 @@ void SpriteObject::move(sf::Vector2f mov)
 
 void SpriteObject::draw(sf::RenderWindow& window)
 {
+    if (!this->active_) return;
+    
     window.draw(this->sprite_);
 }

@@ -13,6 +13,8 @@ public:
         this->sprite_.setPosition(this->position_);
     }
 
+    virtual ~SpriteObject() {}
+
     void setScale(sf::Vector2f scale);
     void setRotation(float rotation);
     void setPosition(sf::Vector2f scale);

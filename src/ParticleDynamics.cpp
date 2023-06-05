@@ -5,10 +5,10 @@
 #define M_PI 3.14159265358979323846
 #define PIXELS_PER_UNIT 10000
 
-static float distance(sf::Vector2f v1, sf::Vector2f v2)
-{
-    return sqrt(pow(v1.x - v2.x, 2) + pow(v1.y - v2.y, 2));
-}
+// static float distance(sf::Vector2f v1, sf::Vector2f v2)
+// {
+//     return sqrt(pow(v1.x - v2.x, 2) + pow(v1.y - v2.y, 2));
+// }
 
 static float vlength(sf::Vector2f v)
 {
@@ -20,8 +20,7 @@ Particle::Particle(sf::Texture& texture, sf::Vector2f x, sf::Vector2f v, float m
     this->state.x = x;
     this->state.v = v;
     this->state.m = m;
-    this->sprite.setTexture(texture);
-    this->sprite.setPosition(x);
+    this->sprite_ = new SpriteObject(texture, x);
 }
 
 sf::Vector2f ForceSource::getForce(ParticleState& s)
@@ -89,6 +88,7 @@ void ForceSource::draw(sf::RenderWindow& window)
 
 bool ParticleDynamics::draw_trails = false;
 bool ParticleDynamics::draw_ff = false;
+int ParticleDynamics::trail_seconds = 2;
 
 void ParticleDynamics::updateForce(ParticleState& s)
 {
@@ -154,11 +154,11 @@ void ParticleDynamics::update(float deltaT)
     for (Particle* p : particles)
     {
         particleUpdate(p->state, deltaT);
-        p->sprite.setPosition(p->state.x);
+        p->sprite_->setPosition(p->state.x);
     }
 }
 
-void ParticleDynamics::draw(sf::RenderWindow& window)
+void ParticleDynamics::draw(sf::RenderWindow& window, float delta_time)
 {
     for (ForceSource* f : force_sources)
     {
@@ -167,7 +167,15 @@ void ParticleDynamics::draw(sf::RenderWindow& window)
 
     for (Particle* p : particles)
     {
-        window.draw(p->sprite);
+        time_since_last_recording_ += delta_time;
+        if (time_since_last_recording_ >= trail_seconds / 20.f)
+        {
+            if (p->position_history_.size() == 20) p->position_history_.pop_front();
+            p->position_history_.push_back(p->sprite_->getPosition());
+            time_since_last_recording_ = 0.f;
+        }
+
+        p->sprite_->draw(window);
     }
 }
 
@@ -178,24 +186,31 @@ void ParticleDynamics::drawTrail(sf::RenderWindow& window)
 
     for (Particle* p : particles)
     {
-        ParticleState s = p->state;
-        particleUpdate(s, -SAMPLES*0.05);
-        for (int i = -SAMPLES; i <= SAMPLES; i++)
+        sf::Vector2f previous = p->sprite_->getPosition();
+        auto iter = p->position_history_.end()-2;
+        for (; iter > p->position_history_.begin(); iter--)
         {
-            particleUpdate(s, 0.05);
-
             sf::CircleShape circle;
             circle.setRadius(2);
-            circle.setFillColor(i < 0 ? sf::Color::Red : sf::Color::Blue);
-            circle.setPosition(s.x);
+            circle.setFillColor(sf::Color::Green);
+            circle.setOrigin(2, 2);
+            circle.setPosition(*iter);
             window.draw(circle);
+
+            sf::Vertex line[] =
+            {
+                sf::Vertex(previous, sf::Color::Blue),
+                sf::Vertex(*iter, sf::Color::Blue)
+            };
+            window.draw(line, 2, sf::Lines);
+            previous = *iter;
         }
     }
 }
 
 #define UNIT 100.f
 #define SAMPLES_PER_UNIT 3
-#define DBS ((int) (UNIT/SAMPLES_PER_UNIT)) // distance between sample
+#define DBS (UNIT/SAMPLES_PER_UNIT) // distance between sample
 
 void ParticleDynamics::drawForceField(sf::RenderWindow& window, float object_mass)
 {
