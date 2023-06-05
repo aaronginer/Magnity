@@ -9,12 +9,13 @@
 
 
 #include <iostream>
+
+#include "objects/Magnet.h"
+
 #include "Player.h"
 #include "PlayerArea.h"
 #include "Border.h"
-#include "Object.h"
-#include "Magnet.h"
-#include "RigidBody.h"
+
 #include "ParticleDynamics.h"
 #include "Level.h"
 
@@ -279,16 +280,7 @@ int main()
     PlayerArea player1_area(&playerAreaTexture, view, 1);                                    //Player 1 Area
     PlayerArea player2_area(&playerAreaTexture, view, 2);                                    //Player 1 Area
     Border border_area1(&borderTexture, 0, player1_area.getArea().getSize().y, player1_area.getArea().getSize().x, 10.f); //Border player 1 area
-    Border border_area2(&borderTexture, 0, view.getSize().y - player2_area.getArea().getSize().y, player1_area.getArea().getSize().x, 10.f); //Border player 2 area
-
-    /*RigidBody ball(100.0f, 2.5f, 0, 20.0f, 20.0f, objectTexture, false,
-                   206.0f, 206.0f);
-    RigidBody ball2(100.0f, 2.5f, 1, 20.0f, 20.0f, objectTexture2, false,
-                   300.0f, 306.0f);
-    */
-
-    Magnet magnet1(&magnetTexture, view, 1);                                                          //Player 1
-    Magnet magnet2(&magnetTexture, view, 2);       
+    Border border_area2(&borderTexture, 0, view.getSize().y - player2_area.getArea().getSize().y, player1_area.getArea().getSize().x, 10.f); //Border player 2 area    
 
     current_level = Level::LoadLevel1(view);
 
@@ -344,30 +336,30 @@ int main()
 
         //keyboard input player 1
         if(Keyboard::isKeyPressed(Keyboard::Key::A)) {
-            magnet1.getMagnet().move(-1.f, 0.0);
+            current_level->magnet1->move({-1.f, 0.0});
         }
         if(Keyboard::isKeyPressed(Keyboard::Key::D)) {
-            magnet1.getMagnet().move(1.f, 0.0);
+            current_level->magnet1->move({1.f, 0.0});
         }
         if(Keyboard::isKeyPressed(Keyboard::Key::S)) {
-            magnet1.getMagnet().move(0.0, 1.f);
+            current_level->magnet1->move({0.0, 1.f});
         }
         if(Keyboard::isKeyPressed(Keyboard::Key::W)) {
-            magnet1.getMagnet().move(0.0, -1.f);
+            current_level->magnet1->move({0.0, -1.f});
         }
 
         //keyboard input player 2
         if(Keyboard::isKeyPressed(Keyboard::Key::Left)) {
-            magnet2.getMagnet().move(-1.f, 0.0);
+            current_level->magnet2->move({-1.f, 0.0});
         }
         if(Keyboard::isKeyPressed(Keyboard::Key::Right)) {
-            magnet2.getMagnet().move(1.f, 0.0);
+            current_level->magnet2->move({1.f, 0.0});
         }
         if(Keyboard::isKeyPressed(Keyboard::Key::Down)) {
-            magnet2.getMagnet().move(0.0, 1.f);
+            current_level->magnet2->move({0.0, 1.f});
         }
         if(Keyboard::isKeyPressed(Keyboard::Key::Up)) {
-            magnet2.getMagnet().move(0.0, -1.f);
+            current_level->magnet2->move({0.0, -1.f});
         }
 
         (*mainWindow).clear();
@@ -376,8 +368,6 @@ int main()
         player2_area.Draw(*mainWindow);
         border_area1.Draw(*mainWindow);
         border_area2.Draw(*mainWindow);
-        magnet1.Draw(*mainWindow);
-        magnet2.Draw(*mainWindow);
         
         sf::Vector2i mousePos = Mouse::getPosition(*mainWindow);
         if (current_level != nullptr)
@@ -389,7 +379,6 @@ int main()
         panel->setVisible(gui_visible);
         gui.draw();
 
-        // RigidBody::DisplayBodies(*mainWindow);
         (*mainWindow).display();
     }
 

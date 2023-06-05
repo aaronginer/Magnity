@@ -119,4 +119,4 @@ private:
     void drawArrow(sf::RenderWindow& window, sf::Texture& tex, sf::Vector2f position, sf::Vector2f F);
 };
 
-#endif
+#endif // MAGNITY_PARTICLES_H

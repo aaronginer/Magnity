@@ -82,6 +82,7 @@ void ForceSource::draw(sf::RenderWindow& window)
     sf::CircleShape c;
     c.setPosition(x);
     c.setFillColor(sf::Color::Red);
+    c.setOrigin({10,10});
     c.setRadius(10);
     window.draw(c);
 }

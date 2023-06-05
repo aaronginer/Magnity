@@ -70,4 +70,4 @@ class Spline
         void printTable();
 };
 
-#endif
+#endif // MAGNITY_PATH_H
