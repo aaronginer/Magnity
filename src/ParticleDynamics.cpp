@@ -150,10 +150,10 @@ void ParticleDynamics::particleUpdate(ParticleState& s, float deltaT)
 
 void ParticleDynamics::update(float deltaT)
 {
-    for (Particle& p : particles)
+    for (Particle* p : particles)
     {
-        particleUpdate(p.state, deltaT);
-        p.sprite.setPosition(p.state.x);
+        particleUpdate(p->state, deltaT);
+        p->sprite.setPosition(p->state.x);
     }
 }
 
@@ -164,9 +164,9 @@ void ParticleDynamics::draw(sf::RenderWindow& window)
         f->draw(window);
     }
 
-    for (Particle& p : particles)
+    for (Particle* p : particles)
     {
-        window.draw(p.sprite);
+        window.draw(p->sprite);
     }
 }
 
@@ -175,9 +175,9 @@ void ParticleDynamics::drawTrail(sf::RenderWindow& window)
 {
     if (!ParticleDynamics::draw_trails) return;
 
-    for (Particle& p : particles)
+    for (Particle* p : particles)
     {
-        ParticleState s = p.state;
+        ParticleState s = p->state;
         particleUpdate(s, -SAMPLES*0.05);
         for (int i = -SAMPLES; i <= SAMPLES; i++)
         {

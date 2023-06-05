@@ -2,6 +2,9 @@
 #include "unistd.h"
 #include <queue>
 
+#ifndef MAGNITY_PARTICLES_H
+#define MAGNITY_PARTICLES_H
+
 #define G 0.0000000000667
 
 class ParticleState {
@@ -94,14 +97,14 @@ public:
 
     ParticleDynamics(bool rk4) { this->rk4 = rk4; }
 
-    std::vector<Particle> particles;
+    std::vector<Particle*> particles;
     std::vector<ForceSource*> force_sources;
     void updateForce(ParticleState& s);
 
     void RK4(ParticleState& s, float deltaT);
     void Euler(ParticleState& s, float deltaT);
 
-    void addParticle(Particle p) { particles.push_back(p); }
+    void addParticle(Particle* p) { particles.push_back(p); }
     void addForceSource(ForceSource* f) { force_sources.push_back(f); }
 
     void update(float deltaT);
@@ -111,5 +114,9 @@ public:
 
     void drawTrail(sf::RenderWindow& window);
     void drawForceField(sf::RenderWindow& window, float object_mass=10.f);
+
+private:
     void drawArrow(sf::RenderWindow& window, sf::Texture& tex, sf::Vector2f position, sf::Vector2f F);
 };
+
+#endif

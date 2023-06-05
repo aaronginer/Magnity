@@ -2,6 +2,9 @@
 #include "assert.h"
 #include <mutex>
 
+#ifndef MAGNITY_PATH_H
+#define MAGNITY_PATH_H
+
 class SplineSegment
 {
     public:
@@ -31,7 +34,6 @@ class Spline
     public:
         std::vector<sf::Vector2f> ctrl_points_;
         std::vector<SplineSegment> segments_;
-        float traversal_speed_ = 4.f;
         float time_;
         sf::Vector2f current_pos_;
 
@@ -43,10 +45,11 @@ class Spline
 
         std::mutex mutex_;
 
-        bool draw_curve_ = false;
-        bool draw_ctrl_and_arc_ = false;
+        static bool draw_curve_;
+        static bool draw_ctrl_and_arc_;
+        static float traversal_speed_;
 
-        int easing_option_ = 0;
+        static int easing_option_;
 
         Spline(std::vector<sf::Vector2f> ctrl_points);
 
@@ -54,7 +57,7 @@ class Spline
         void initSegments();
         void initArcLengthTable();
 
-        void interpolate(float time_delta);
+        void update(float time_delta);
 
         void drawObject();
         void drawControlPoints();
@@ -66,3 +69,5 @@ class Spline
         std::pair<int, float> searchForU(float arc_length);
         void printTable();
 };
+
+#endif

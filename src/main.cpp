@@ -16,6 +16,7 @@
 #include "Magnet.h"
 #include "RigidBody.h"
 #include "ParticleDynamics.h"
+#include "Level.h"
 
 using namespace std::chrono;
 
@@ -23,17 +24,15 @@ using namespace std::chrono;
 #define HEIGTH 800
 const float AR = (float)WIDTH/(float)HEIGTH;
 
+extern void getClickedControlPoint(Level* level, sf::Vector2f mouse_position, sf::Vector2f** ctrl_point, sf::Sprite** ctrl_sprite, Spline** ctrl_spline);
+
 sf::RenderWindow *mainWindow;
 
 std::thread animation_loop_thread;
 
-
-Spline s({{200, 200}, {250, 200}, {250, 500}, {500, 500}, {500, 200}, {550, 200}});
-ParticleDynamics pdyn(true);
-
-bool dragging_ctrl_point = false;
-sf::Sprite* ctrl_point_to_drag;
-size_t ctrl_point_to_drag_idx;
+sf::Vector2f* ctrl_point_to_drag = nullptr;
+sf::Sprite* ctrl_sprite_to_drag = nullptr;
+Spline* ctrl_spline_to_drag = nullptr;
 
 // Global variables
 int animation_update_rate = 500;
@@ -41,19 +40,18 @@ int fps = 60;
 int easing = 0;
 bool gui_visible = true;
 
-
+Level* current_level = nullptr;
 bool game_paused = false;
 
 void createPathInterpolationPanel(tgui::Panel::Ptr panel, sf::RenderWindow& window)
 {
-
     tgui::Label::Ptr traversalSpeedLabel = tgui::Label::create();
     traversalSpeedLabel->setText("PI: Traversal Speed:");
     traversalSpeedLabel->setPosition(220, 10);
     traversalSpeedLabel->setTextSize(16);
 
     tgui::Label::Ptr traversalSpeedValueLabel = tgui::Label::create();
-    traversalSpeedValueLabel->setText(std::to_string(s.traversal_speed_));
+    traversalSpeedValueLabel->setText(std::to_string(Spline::traversal_speed_));
     traversalSpeedValueLabel->setPosition(380, 10);
     traversalSpeedValueLabel->setTextSize(16);
 
@@ -62,13 +60,13 @@ void createPathInterpolationPanel(tgui::Panel::Ptr panel, sf::RenderWindow& wind
     traversalSpeedSlider->setMinimum(0.1f);
     traversalSpeedSlider->setMaximum(20.0f);
     traversalSpeedSlider->setStep(0.05f);
-    traversalSpeedSlider->setValue(s.traversal_speed_);
+    traversalSpeedSlider->setValue(Spline::traversal_speed_);
     traversalSpeedSlider->setSize(200, 20);
     traversalSpeedSlider->setPosition(10, 10);
     traversalSpeedSlider->onValueChange.connect([traversalSpeedValueLabel](float value)
     { 
-        s.traversal_speed_ = value; 
-        traversalSpeedValueLabel->setText(std::to_string(s.traversal_speed_));
+        Spline::traversal_speed_ = value; 
+        traversalSpeedValueLabel->setText(std::to_string(Spline::traversal_speed_));
     });
 
     panel->add(traversalSpeedSlider);
@@ -139,7 +137,7 @@ void createPathInterpolationPanel(tgui::Panel::Ptr panel, sf::RenderWindow& wind
     drawCurveButton->setText("PI: Draw Curves");
     drawCurveButton->setSize(200, 30);
     drawCurveButton->setPosition(10, 100);
-    drawCurveButton->onPress.connect([&]() { s.draw_curve_ = !s.draw_curve_; });
+    drawCurveButton->onPress.connect([&]() { Spline::draw_curve_ = !Spline::draw_curve_; });
 
     panel->add(drawCurveButton);
 
@@ -148,7 +146,7 @@ void createPathInterpolationPanel(tgui::Panel::Ptr panel, sf::RenderWindow& wind
     drawControlsButton->setText("PI: Draw Control Points and Arc-Length Table samples");
     drawControlsButton->setSize(400, 30);
     drawControlsButton->setPosition(10, 140);
-    drawControlsButton->onPress.connect([&]() { s.draw_ctrl_and_arc_ = !s.draw_ctrl_and_arc_; });
+    drawControlsButton->onPress.connect([&]() { Spline::draw_ctrl_and_arc_ = !Spline::draw_ctrl_and_arc_; });
 
     panel->add(drawControlsButton);
 
@@ -161,7 +159,7 @@ void createPathInterpolationPanel(tgui::Panel::Ptr panel, sf::RenderWindow& wind
     easingComboBox->setPosition(10, 180);
     easingComboBox->setDefaultText("Easing Off");
     easingComboBox->onItemSelect.connect([easingComboBox]{
-        s.easing_option_ = easingComboBox->getSelectedItemIndex();
+        Spline::easing_option_ = easingComboBox->getSelectedItemIndex();
     });
 
     panel->add(easingComboBox);
@@ -228,10 +226,7 @@ void animation_loop()
         
         deltaTime = clock.restart().asSeconds();
 
-        pdyn.update(deltaTime);
-        // printf("time_delta: %f\n", delta_time.count()/1000.f);
-        s.interpolate(deltaTime);
-        // RigidBody::RunSimulation(deltaTime, *mainWindow);
+        if (current_level != nullptr) current_level->update(deltaTime);
 
         // subtract time needed for calculations
         usleep((1000000 / animation_update_rate) - clock.getElapsedTime().asMicroseconds());
@@ -294,21 +289,8 @@ int main()
 
     Magnet magnet1(&magnetTexture, view, 1);                                                          //Player 1
     Magnet magnet2(&magnetTexture, view, 2);       
-    
-    // Particle p1(objectTexture, view.getCenter(), {0, 0}, 1);
-    Particle p1(objectTexture, view.getCenter()-sf::Vector2f(view.getCenter().x/2, 0), {0, 0}, 10);
-    p1.sprite.setScale({0.01f, 0.01f});
-    ForceSource f(ForceType::AntiGravity, view.getCenter(), 50000);
-    ForceSource f1(ForceType::Gravity, view.getCenter(), 50000);
-    ForceSource f_c(ForceType::Constant, sf::Vector2f(200, 0));
-    // ForceSource f_c2(ForceType::VectorField, VectorFieldFunction::Defined, 100);
-    //ForceSource f(ForceType::Gravity, view.getCenter()+sf::Vector2f(100, 0), 50000);
 
-    pdyn.addParticle(p1);
-    pdyn.addForceSource(&f);   
-    pdyn.addForceSource(&f1);  
-    pdyn.addForceSource(&f_c); 
-    // pdyn.addForceSource(&f_c2);   
+    current_level = Level::LoadLevel1(view);
 
     animation_loop_thread = std::thread(animation_loop);
 
@@ -331,21 +313,13 @@ int main()
             else if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
             {
                 sf::Vector2f mouse = mainWindow->mapPixelToCoords(sf::Mouse::getPosition(*mainWindow));
-                for (size_t i = 0; i < s.ctrl_sprites_.size(); i++)
-                {
-                    sf::FloatRect bounds = s.ctrl_sprites_[i].getGlobalBounds();
-
-                    if (bounds.contains(mouse))
-                    {
-                        dragging_ctrl_point = true;
-                        ctrl_point_to_drag = &s.ctrl_sprites_[i];
-                        ctrl_point_to_drag_idx = i;
-                    }
-                }       
+                getClickedControlPoint(current_level, mouse, &ctrl_point_to_drag, &ctrl_sprite_to_drag, &ctrl_spline_to_drag); 
             }
             else if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left)
             {
-                dragging_ctrl_point = false;     
+                ctrl_point_to_drag = nullptr;
+                ctrl_sprite_to_drag = nullptr;
+                ctrl_spline_to_drag = nullptr;     
             }
             else if (event.type == sf::Event::Resized)
             {
@@ -358,12 +332,12 @@ int main()
             gui.handleEvent(event);
         }
 
-        if (dragging_ctrl_point)
+        if (ctrl_point_to_drag != nullptr)
         {
             sf::Vector2f mouse = mainWindow->mapPixelToCoords(sf::Mouse::getPosition(*mainWindow));
-            ctrl_point_to_drag->setPosition(mouse - sf::Vector2f(4, 4));
-            s.ctrl_points_[ctrl_point_to_drag_idx] = mouse;
-            s.init();
+            *ctrl_point_to_drag = mouse;
+            ctrl_sprite_to_drag->setPosition(mouse - sf::Vector2f(4, 4));
+            ctrl_spline_to_drag->init();
         }
 
         if (game_paused) continue;
@@ -406,16 +380,11 @@ int main()
         magnet2.Draw(*mainWindow);
         
         sf::Vector2i mousePos = Mouse::getPosition(*mainWindow);
-        f.x = {(float) mousePos.x, (float) mousePos.y};
-
-        s.drawObject();
-        s.drawCurve();
-        s.drawControlPoints();
-        s.drawArcSamples();
-
-        pdyn.draw(*mainWindow);
-        pdyn.drawTrail(*mainWindow);
-        pdyn.drawForceField(*mainWindow);
+        if (current_level != nullptr)
+        {
+            current_level->updateMouseParticlePosition({(float) mousePos.x, (float) mousePos.y});
+            current_level->draw(*mainWindow);
+        }
 
         panel->setVisible(gui_visible);
         gui.draw();

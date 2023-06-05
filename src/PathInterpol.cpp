@@ -1,5 +1,6 @@
 #include "PathInterpol.h"
 #include "cmath"
+#include "Level.h"
 
 #define M_PI 3.14159265358979323846
 
@@ -62,6 +63,12 @@ void SplineSegment::drawSamples()
     }
 }
 
+bool Spline::draw_ctrl_and_arc_ = false;
+bool Spline::draw_curve_ = false;
+float Spline::traversal_speed_ = 4.0f;
+
+int Spline::easing_option_ = 0;
+
 Spline::Spline(std::vector<sf::Vector2f> ctrl_points)
 {
     this->ctrl_points_ = ctrl_points;
@@ -102,7 +109,7 @@ void Spline::initSegments()
     }
 }
 
-void Spline::interpolate(float time_delta)
+void Spline::update(float time_delta)
 {
     mutex_.lock();
 
@@ -214,4 +221,24 @@ std::pair<int, float> Spline::searchForU(float arc_length)
     float interpolate_ratio = (arc_length - arc_length_table_[i-1].arc_length_) / arc_segment_length;
 
     return {arc_length_table_[i-1].segment_index_, arc_length_table_[i-1].segment_parameter_ + interpolate_ratio * 1.f/(ARC_LENGTH_SAMPLES-1)};
+}
+
+void getClickedControlPoint(Level* level, sf::Vector2f mouse_position, sf::Vector2f** ctrl_point, sf::Sprite** ctrl_sprite, Spline** ctrl_spline)
+{
+    if (level == nullptr) return;
+
+    for (Spline* s : level->splines_)
+    {
+        for (size_t i = 0; i < s->ctrl_sprites_.size(); i++)
+        {
+            sf::FloatRect bounds = s->ctrl_sprites_[i].getGlobalBounds();
+
+            if (bounds.contains(mouse_position))
+            {
+                *ctrl_point = &s->ctrl_points_[i];
+                *ctrl_sprite = &s->ctrl_sprites_[i];
+                *ctrl_spline = s;
+            }
+        } 
+    }
 }
