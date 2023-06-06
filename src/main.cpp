@@ -12,10 +12,6 @@
 
 #include "objects/Magnet.h"
 
-#include "Player.h"
-#include "PlayerArea.h"
-#include "Border.h"
-
 #include "ParticleDynamics.h"
 #include "Level.h"
 
@@ -281,35 +277,7 @@ int main()
 
     createPathInterpolationPanel(panel, *mainWindow);
     createToggleButtons(panel, gui);
-    
-    // OBJECTS
 
-    //------------------------------------- Textures -------------------------------------//
-    Texture playerTexture;
-    playerTexture.loadFromFile("res/animation.png");
-
-    Texture playerAreaTexture;
-    playerAreaTexture.loadFromFile("res/player_area.png");
-
-    Texture borderTexture;
-    borderTexture.loadFromFile("res/border.png");
-
-    Texture objectTexture;
-    objectTexture.loadFromFile("res/object.png");
-
-    Texture objectTexture2;
-    objectTexture2.loadFromFile("res/object2.png");
-
-    Texture magnetTexture;
-    magnetTexture.loadFromFile("res/magnet.png");
-
-
-    //------------------------------------- Objects  -------------------------------------//
-
-    PlayerArea player1_area(&playerAreaTexture, view, 1);                                    //Player 1 Area
-    PlayerArea player2_area(&playerAreaTexture, view, 2);                                    //Player 1 Area
-    Border border_area1(&borderTexture, 0, player1_area.getArea().getSize().y, player1_area.getArea().getSize().x, 10.f); //Border player 1 area
-    Border border_area2(&borderTexture, 0, view.getSize().y - player2_area.getArea().getSize().y, player1_area.getArea().getSize().x, 10.f); //Border player 2 area    
 
     current_level = Level::LoadLevel1(view);
 
@@ -320,6 +288,7 @@ int main()
     while ((*mainWindow).isOpen())
     {
         deltaTime = clock.restart().asSeconds();
+        sf::Vector2f mouse_pos = mainWindow->mapPixelToCoords(sf::Mouse::getPosition(*mainWindow)); // Mouse::getPosition(*mainWindow);
 
         sf::Event event;
         while ((*mainWindow).pollEvent(event))
@@ -334,11 +303,15 @@ int main()
                 {
                     game_paused = !game_paused;
                 }
+
+                if (current_level != nullptr)
+                {
+                    current_level->handlePolledKeyInput(event);
+                }
             }
             else if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
             {
-                sf::Vector2f mouse = mainWindow->mapPixelToCoords(sf::Mouse::getPosition(*mainWindow));
-                getClickedControlPoint(current_level, mouse, &ctrl_point_to_drag, &ctrl_sprite_to_drag, &ctrl_spline_to_drag); 
+                getClickedControlPoint(current_level, mouse_pos, &ctrl_point_to_drag, &ctrl_sprite_to_drag, &ctrl_spline_to_drag); 
             }
             else if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left)
             {
@@ -367,45 +340,16 @@ int main()
 
         if (game_paused) continue;
 
-        //keyboard input player 1
-        if(Keyboard::isKeyPressed(Keyboard::Key::A)) {
-            current_level->magnet1->move({-1.f, 0.0});
-        }
-        if(Keyboard::isKeyPressed(Keyboard::Key::D)) {
-            current_level->magnet1->move({1.f, 0.0});
-        }
-        if(Keyboard::isKeyPressed(Keyboard::Key::S)) {
-            current_level->magnet1->move({0.0, 1.f});
-        }
-        if(Keyboard::isKeyPressed(Keyboard::Key::W)) {
-            current_level->magnet1->move({0.0, -1.f});
-        }
-
-        //keyboard input player 2
-        if(Keyboard::isKeyPressed(Keyboard::Key::Left)) {
-            current_level->magnet2->move({-1.f, 0.0});
-        }
-        if(Keyboard::isKeyPressed(Keyboard::Key::Right)) {
-            current_level->magnet2->move({1.f, 0.0});
-        }
-        if(Keyboard::isKeyPressed(Keyboard::Key::Down)) {
-            current_level->magnet2->move({0.0, 1.f});
-        }
-        if(Keyboard::isKeyPressed(Keyboard::Key::Up)) {
-            current_level->magnet2->move({0.0, -1.f});
+        if (current_level != nullptr)
+        {
+            current_level->handleInstantKeyInput(deltaTime);
+            current_level->updateMouseParticlePosition(mouse_pos);
         }
 
         (*mainWindow).clear();
-
-        player1_area.Draw(*mainWindow);
-        player2_area.Draw(*mainWindow);
-        border_area1.Draw(*mainWindow);
-        border_area2.Draw(*mainWindow);
         
-        sf::Vector2i mousePos = Mouse::getPosition(*mainWindow);
         if (current_level != nullptr)
         {
-            current_level->updateMouseParticlePosition({(float) mousePos.x, (float) mousePos.y});
             current_level->draw(*mainWindow, deltaTime);
         }
 

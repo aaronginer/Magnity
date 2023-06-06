@@ -29,6 +29,9 @@ class Level {
 
         void update(float time_delta);
         
+        void handlePolledKeyInput(sf::Event keyEvent);
+        void handleInstantKeyInput(float delta_time);
+
         void updateMouseParticlePosition(sf::Vector2f new_pos);
 
         void draw(sf::RenderWindow& renderWindow, float delta_time);

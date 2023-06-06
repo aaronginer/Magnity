@@ -82,19 +82,31 @@ void Level::draw(sf::RenderWindow& renderWindow, float delta_time)
     magnet2->draw(renderWindow);
 }
 
+void Level::handlePolledKeyInput(sf::Event keyEvent)
+{
+    magnet1->handlePolledKeyInput(keyEvent);
+    magnet2->handlePolledKeyInput(keyEvent);
+}
+
+void Level::handleInstantKeyInput(float delta_time)
+{
+    magnet1->handleInstantKeyInput(delta_time);
+    magnet2->handleInstantKeyInput(delta_time);
+}
+
 Level* Level::LoadLevel1(sf::View& view)
 {
     // Textures
     sf::Texture* objectTexture = new sf::Texture();
     objectTexture->loadFromFile("res/object.png");
 
-    sf::Texture* magnetTexture = new sf::Texture();
-    magnetTexture->loadFromFile("res/magnet.png");
+    // Splines
 
     Spline* s = new Spline({{500, 200}, {200, 200}, {200, 500}, {500, 500}}, *objectTexture, true);
+    
+    // ParticleDynamics
     ParticleDynamics* pdyn = new ParticleDynamics(true);
 
-    // ParticleDynamics
     Particle* p1 = new Particle(*objectTexture, view.getCenter()-sf::Vector2f(view.getCenter().x/2, 0), {0, 0}, 10);
     p1->sprite_->setScale({0.01f, 0.01f});
     ForceSource* f = new ForceSource(ForceType::AntiGravity, view.getCenter(), 50000);
@@ -109,17 +121,20 @@ Level* Level::LoadLevel1(sf::View& view)
 
     // RigidBodies
 
+    // create level
     Level* l = new Level();
     l->splines_.push_back(s);
     l->particle_dynamics_ = pdyn;
     l->loaded_textures_.push_back(objectTexture);
-    l->loaded_textures_.push_back(magnetTexture);
     l->mouse_force = f;
 
     // Magnets
-    l->magnet1 = new Magnet(*magnetTexture, {40, 30}, 0);
+    MagnetKeySet player1_keyset = { sf::Keyboard::Key::A, sf::Keyboard::Key::D, sf::Keyboard::Key::W, sf::Keyboard::Key::S, sf::Keyboard::Key::E };
+    MagnetKeySet player2_keyset = { sf::Keyboard::Key::Left, sf::Keyboard::Key::Right, sf::Keyboard::Key::Up, sf::Keyboard::Key::Down, sf::Keyboard::Key::Enter };
+
+    l->magnet1 = new Magnet(player1_keyset, {40, 30}, 0);
     l->magnet1->setFollowObject(p1->sprite_);
-    l->magnet2 = new Magnet(*magnetTexture, {40, 500}, 1);
+    l->magnet2 = new Magnet(player2_keyset, {40, 500}, 1);
     l->magnet2->setFollowObject(p1->sprite_);
     return l;
 }
