@@ -338,8 +338,6 @@ int main()
             ctrl_spline_to_drag->init();
         }
 
-        if (game_paused) continue;
-
         if (current_level != nullptr)
         {
             current_level->handleInstantKeyInput(deltaTime);
