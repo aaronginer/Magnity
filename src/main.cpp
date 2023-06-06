@@ -35,9 +35,8 @@ std::thread animation_loop_thread;
 // Global variables
 int animation_update_rate = 500;
 int fps = 60;
-int easing = 0;
-bool gui_visible = false;
 
+bool gui_visible = false;
 Level* current_level = nullptr;
 bool game_paused = false;
 
@@ -81,6 +80,8 @@ int main()
     Clock clock;
     while ((*mainWindow).isOpen())
     {
+        assert(current_level);
+
         deltaTime = clock.restart().asSeconds();
         sf::Vector2f mouse_pos = mainWindow->mapPixelToCoords(sf::Mouse::getPosition(*mainWindow)); // Mouse::getPosition(*mainWindow);
 
@@ -93,30 +94,21 @@ int main()
             }
             else if (event.type == sf::Event::KeyPressed)
             {
-                if (current_level != nullptr) // ingame
+                if (event.key.code == Keyboard::Key::Escape)
                 {
-                    if (event.key.code == Keyboard::Key::Escape)
-                    {
-                        game_paused = !game_paused;
-                    }
-
-                    current_level->handlePolledKeyInput(event);
+                    game_paused = !game_paused;
                 }
+
+                current_level->handlePolledKeyInput(event);
                 
             }
             else if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
             {
-                if (current_level != nullptr)
-                {
-                    current_level->handleClick(mouse_pos);
-                } 
+                current_level->handleClick(mouse_pos);
             }
             else if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left)
             {
-                if (current_level != nullptr)
-                {
-                    current_level->handleRelease();
-                }
+                current_level->handleRelease();
             }
             else if (event.type == sf::Event::Resized)
             {
@@ -130,21 +122,14 @@ int main()
             gui.handleEvent(event);
         }
 
+        // instant input handling
+        current_level->handleInstantKeyInput(deltaTime);
+        current_level->updateMouseParticlePosition(mouse_pos);
+        current_level->handleDrag(mouse_pos);
 
-        if (current_level != nullptr)
-        {
-            current_level->handleInstantKeyInput(deltaTime);
-            current_level->updateMouseParticlePosition(mouse_pos);
-            current_level->handleDrag(mouse_pos);
-        }
-
+        // drawing
         (*mainWindow).clear(current_level == nullptr ? sf::Color::Black : current_level->background_color_);
-        
-        if (current_level != nullptr)
-        {
-            current_level->draw(*mainWindow, deltaTime);
-        }
-
+        current_level->draw(*mainWindow, deltaTime);
         control_panel->setVisible(gui_visible);
         gui.draw();
 

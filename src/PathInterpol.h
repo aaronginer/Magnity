@@ -50,12 +50,12 @@ class Spline
         static bool draw_curve_;
         static bool draw_ctrl_and_arc_;
         static float traversal_speed_;
+
+        static int easing_option_;
     
         static sf::Vector2f* ctrl_point_to_drag;
         static sf::Sprite* ctrl_sprite_to_drag;
         static Spline* ctrl_spline_to_drag;
-
-        static int easing_option_;
 
         Spline(std::vector<sf::Vector2f> ctrl_points, sf::Texture& texture, bool circular=false);
 
