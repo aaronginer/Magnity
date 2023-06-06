@@ -307,15 +307,16 @@ int main()
     /*RigidBody ball(1.0f, 1.0f, 1, 20.0f, 20.0f, objectTexture, false, view.getSize().x/2, view.getSize().y/2);                                                      //Object
     ball_ptr = &ball;*/
 
-    for(int i = 0; i < 10; i++) {
-        RigidBody* ball = new RigidBody(1.0f, 2.5f, 0, 20.0f, 20.0f, objectTexture, false,
-                                        206.0f + (i * 25), 350.0f);
+
+    for(int i = 0; i < 2; i++) {
+        RigidBody* ball = new RigidBody(1.0, 2.5, 0, 20.0, 20.0, objectTexture, false,
+                                        206.0+(i * 25), 350.0f);
         rigid_bodies->push_back(ball);
     }
 
-    for(int i = 0; i < 10; i++) {
-        RigidBody* ball = new RigidBody(1.0f, 2.5f, 1, 20.0f, 20.0f, objectTexture2, false,
-                                        206.0f + (i * 25), 400.0f);
+    for(int i = 0; i < 5; i++) {
+        RigidBody* ball = new RigidBody(1.0, 2.5, 1, 20.0, 20.0, objectTexture2, false,
+                                        206.0+(i * 25), 400.0);
         rigid_bodies->push_back(ball);
     }
 
