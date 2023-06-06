@@ -39,7 +39,7 @@ Magnet::Magnet(MagnetKeySet key_set, sf::Vector2f position, int player)
     this->levels_[1]->setScale({0.1f, 0.1f});
     this->levels_[2]->setScale({0.1f, 0.1f});
 
-    this->player = player;
+    this->player_ = player;
 }
 
 Magnet::~Magnet() {
@@ -82,13 +82,13 @@ void Magnet::handleInstantKeyInput(float delta_time)
 
 void Magnet::toggleLevel()
 {   
-    this->level = (this->level + 1) % 4;
-
-    this->magnet_active_->active_ = this->level != 0;    
-    this->magnet_inactive_->active_ = this->level == 0;
-    this->levels_[0]->active_ = this->level > 0;
-    this->levels_[1]->active_ = this->level > 1;
-    this->levels_[2]->active_ = this->level > 2;
+    this->level_ = (this->level_ + 1) % 4;
+    
+    this->magnet_active_->active_ = this->level_ != 0;    
+    this->magnet_inactive_->active_ = this->level_ == 0;
+    this->levels_[0]->active_ = this->level_ > 0;
+    this->levels_[1]->active_ = this->level_ > 1;
+    this->levels_[2]->active_ = this->level_ > 2;
 }
 
 void Magnet::setFollowObject(GameObject* follow_object)

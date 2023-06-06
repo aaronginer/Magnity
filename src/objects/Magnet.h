@@ -18,8 +18,8 @@ struct MagnetKeySet {
 class Magnet {
 public:
     GameObject* follow_object_ = nullptr;
-    int player;
-    int level = 1;
+    int player_;
+    int level_ = 1;
     MagnetKeySet key_set_;
 
     Magnet(MagnetKeySet key_set, sf::Vector2f position, int player);

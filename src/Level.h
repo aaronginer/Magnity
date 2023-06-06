@@ -1,8 +1,10 @@
+#include "TGUI/TGUI.hpp"
+#include "SFML/Graphics.hpp"
+
 #include "PathInterpol.h"
 // #include "RigidBody.h"
 #include "ParticleDynamics.h"
 #include "objects/Magnet.h"
-#include "SFML/Graphics.hpp"
 #include <vector>
 
 #ifndef MAGNITY_LEVEL_H
@@ -11,32 +13,37 @@
 class Level {
     public:
         std::vector<Spline*> splines_;
-        ParticleDynamics* particle_dynamics_;
+        std::vector<ParticleDynamics*> particle_dynamics_;
         // std::vector<RigidBody*> rigid_bodies_;
 
         std::vector<sf::Texture*> loaded_textures_;
+        std::vector<Magnet*> magnets_;
         
+        std::vector<SpriteObject*> game_objects_;
+
         ForceSource* mouse_force = nullptr;
-        // magnets
 
-        Magnet* magnet1 = nullptr;
-        Magnet* magnet2 = nullptr;
-
+        sf::Color background_color_ = sf::Color::White;
+        tgui::Panel::Ptr level_panel_;
 
         Level();
 
-        void destroy();
+        void destroy(sf::RenderWindow& window);
 
         void update(float time_delta);
         
         void handlePolledKeyInput(sf::Event keyEvent);
         void handleInstantKeyInput(float delta_time);
+        void handleClick(sf::Vector2f mouse_position);
+        void handleRelease();
+        void handleDrag(sf::Vector2f mouse_position);
 
         void updateMouseParticlePosition(sf::Vector2f new_pos);
 
-        void draw(sf::RenderWindow& renderWindow, float delta_time);
+        void draw(sf::RenderWindow& window, float delta_time);
 
-        static Level* LoadLevel1(sf::View& view);
+        static Level* LoadLevel0(sf::RenderWindow& window, tgui::GuiSFML& gui);
+        static Level* LoadLevel1(sf::RenderWindow& window, tgui::GuiSFML& gui);
 };
 
 

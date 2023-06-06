@@ -19,7 +19,7 @@ class SplineSegment
         SplineSegment(sf::Vector2f p0, sf::Vector2f p1, sf::Vector2f p2, sf::Vector2f p3);
 
         sf::Vector2f getPoint(float t);
-        void drawSamples();
+        void drawSamples(sf::RenderWindow& window);
         void initArcLengths();
 };
 
@@ -50,6 +50,10 @@ class Spline
         static bool draw_curve_;
         static bool draw_ctrl_and_arc_;
         static float traversal_speed_;
+    
+        static sf::Vector2f* ctrl_point_to_drag;
+        static sf::Sprite* ctrl_sprite_to_drag;
+        static Spline* ctrl_spline_to_drag;
 
         static int easing_option_;
 
@@ -63,15 +67,19 @@ class Spline
 
         void update(float time_delta);
 
-        void drawObject();
-        void drawControlPoints();
-        void drawArcSamples();
-        void drawCurve();
+        void drawObject(sf::RenderWindow& window);
+        void drawControlPoints(sf::RenderWindow& window);
+        void drawArcSamples(sf::RenderWindow& window);
+        void drawCurve(sf::RenderWindow& window);
 
         void printLengths();
 
         std::pair<int, float> searchForU(float arc_length);
         void printTable();
+
+        void handleClick(sf::Vector2f mouse_position);
+        static void handleRelease();
+        static void handleDrag(sf::Vector2f mouse_position);
 };
 
 #endif // MAGNITY_PATH_H

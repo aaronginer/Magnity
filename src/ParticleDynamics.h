@@ -97,7 +97,7 @@ public:
     static bool draw_trails;
     static bool draw_ff;
     static int trail_seconds;
-    
+
     float time_since_last_recording_ = 0.0f;
     bool rk4 = false;
 

@@ -4,8 +4,6 @@
 
 #define M_PI 3.14159265358979323846
 
-extern sf::RenderWindow* mainWindow;
-
 #define ARC_LENGTH_SAMPLES 30ULL
 
 float distance(sf::Vector2f v1, sf::Vector2f v2)
@@ -50,7 +48,7 @@ void SplineSegment::initArcLengths()
     }
 }
 
-void SplineSegment::drawSamples()
+void SplineSegment::drawSamples(sf::RenderWindow& window)
 {
     for (size_t i = 0; i < ARC_LENGTH_SAMPLES; i++)
     {
@@ -59,15 +57,18 @@ void SplineSegment::drawSamples()
         sf::CircleShape circle(.8f);
         circle.setFillColor(sf::Color::Yellow);
         circle.setPosition(point - sf::Vector2f(0.8f, 0.8f));
-        (*mainWindow).draw(circle);
+        window.draw(circle);
     }
 }
 
 bool Spline::draw_ctrl_and_arc_ = false;
 bool Spline::draw_curve_ = false;
 float Spline::traversal_speed_ = 4.0f;
-
 int Spline::easing_option_ = 0;
+
+sf::Vector2f* Spline::ctrl_point_to_drag = nullptr;
+sf::Sprite* Spline::ctrl_sprite_to_drag = nullptr;
+Spline* Spline::ctrl_spline_to_drag = nullptr;
 
 Spline::Spline(std::vector<sf::Vector2f> ctrl_points, sf::Texture& texture, bool circular)
 {
@@ -144,34 +145,34 @@ void Spline::update(float time_delta)
     mutex_.unlock();      
 }
 
-void Spline::drawObject()
+void Spline::drawObject(sf::RenderWindow& window)
 {
     this->sprite_->setPosition(current_pos_);
-    this->sprite_->draw(*mainWindow);
+    this->sprite_->draw(window);
 }
 
-void Spline::drawControlPoints()
+void Spline::drawControlPoints(sf::RenderWindow& window)
 {
     if (!draw_ctrl_and_arc_) return;
 
     for (sf::Sprite& s : ctrl_sprites_)
     {
-        (*mainWindow).draw(s);
+        window.draw(s);
     }
 }
 
-void Spline::drawArcSamples()
+void Spline::drawArcSamples(sf::RenderWindow& window)
 {
     if (!draw_ctrl_and_arc_) return;
 
     for (SplineSegment s : segments_)
     {
-        s.drawSamples();
+        s.drawSamples(window);
     }
 }
 
 #define DRAW_CURVE_SAMPLES_PER_UNIT 5
-void Spline::drawCurve()
+void Spline::drawCurve(sf::RenderWindow& window)
 {
     if (!draw_curve_) return;
 
@@ -184,7 +185,7 @@ void Spline::drawCurve()
         sf::CircleShape circle(1.0f);
         circle.setFillColor(sf::Color::Green);
         circle.setPosition(curve_position - sf::Vector2f(1, 1));
-        (*mainWindow).draw(circle);
+        window.draw(circle);
     }
 }
 
@@ -232,22 +233,33 @@ std::pair<int, float> Spline::searchForU(float arc_length)
     return {arc_length_table_[i-1].segment_index_, arc_length_table_[i-1].segment_parameter_ + interpolate_ratio * 1.f/(ARC_LENGTH_SAMPLES-1)};
 }
 
-void getClickedControlPoint(Level* level, sf::Vector2f mouse_position, sf::Vector2f** ctrl_point, sf::Sprite** ctrl_sprite, Spline** ctrl_spline)
+void Spline::handleClick(sf::Vector2f mouse_position)
 {
-    if (level == nullptr) return;
-
-    for (Spline* s : level->splines_)
+    for (size_t i = 0; i < this->ctrl_sprites_.size(); i++)
     {
-        for (size_t i = 0; i < s->ctrl_sprites_.size(); i++)
-        {
-            sf::FloatRect bounds = s->ctrl_sprites_[i].getGlobalBounds();
+        sf::FloatRect bounds = this->ctrl_sprites_[i].getGlobalBounds();
 
-            if (bounds.contains(mouse_position))
-            {
-                *ctrl_point = &s->ctrl_points_[i];
-                *ctrl_sprite = &s->ctrl_sprites_[i];
-                *ctrl_spline = s;
-            }
-        } 
+        if (bounds.contains(mouse_position))
+        {
+            Spline::ctrl_point_to_drag = &this->ctrl_points_[i];
+            Spline::ctrl_sprite_to_drag = &this->ctrl_sprites_[i];
+            Spline::ctrl_spline_to_drag = this;
+        }
     }
 }
+
+void Spline::handleRelease()
+{
+    Spline::ctrl_point_to_drag = nullptr;
+    Spline::ctrl_sprite_to_drag = nullptr;
+    Spline::ctrl_spline_to_drag = nullptr;
+}
+               
+void Spline::handleDrag(sf::Vector2f mouse_position)
+{
+    if (Spline::ctrl_point_to_drag == nullptr) return;
+
+    *Spline::ctrl_point_to_drag = mouse_position;
+    Spline::ctrl_sprite_to_drag->setPosition(mouse_position - sf::Vector2f(4, 4));
+    Spline::ctrl_spline_to_drag->init();
+}   

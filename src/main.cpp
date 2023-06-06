@@ -22,26 +22,143 @@ using namespace std::chrono;
 const float AR = (float)WIDTH/(float)HEIGTH;
 
 extern void getClickedControlPoint(Level* level, sf::Vector2f mouse_position, sf::Vector2f** ctrl_point, sf::Sprite** ctrl_sprite, Spline** ctrl_spline);
+extern tgui::Button::Ptr createControlsButton();
+
+tgui::Panel::Ptr createControlPanel(sf::RenderWindow& window);
+void updateControlPanelPosition(tgui::Panel::Ptr panel, sf::RenderWindow& window);
 
 sf::RenderWindow *mainWindow;
+tgui::Panel::Ptr control_panel;
 
 std::thread animation_loop_thread;
-
-sf::Vector2f* ctrl_point_to_drag = nullptr;
-sf::Sprite* ctrl_sprite_to_drag = nullptr;
-Spline* ctrl_spline_to_drag = nullptr;
 
 // Global variables
 int animation_update_rate = 500;
 int fps = 60;
 int easing = 0;
-bool gui_visible = true;
+bool gui_visible = false;
 
 Level* current_level = nullptr;
 bool game_paused = false;
 
-void createPathInterpolationPanel(tgui::Panel::Ptr panel, sf::RenderWindow& window)
+void animation_loop()
 {
+    float deltaTime = 0.0f;
+    Clock clock;
+
+    while((*mainWindow).isOpen())
+    {
+        if (game_paused) {
+            clock.restart().asSeconds();
+            continue;
+        }
+        
+        deltaTime = clock.restart().asSeconds();
+
+        if (current_level != nullptr) current_level->update(deltaTime);
+
+        // subtract time needed for calculations
+        usleep((1000000 / animation_update_rate) - clock.getElapsedTime().asMicroseconds());
+    }
+}
+
+int main()
+{
+    mainWindow = new sf::RenderWindow(sf::VideoMode(WIDTH, HEIGTH), "Magnity!");
+    (*mainWindow).setFramerateLimit(fps);
+
+    // GUI
+    tgui::GuiSFML gui(*mainWindow);
+
+    control_panel = createControlPanel(*mainWindow);
+    gui.add(control_panel);
+
+    current_level = Level::LoadLevel0(*mainWindow, gui);
+
+    animation_loop_thread = std::thread(animation_loop);
+
+    float deltaTime = 0.0f;
+    Clock clock;
+    while ((*mainWindow).isOpen())
+    {
+        deltaTime = clock.restart().asSeconds();
+        sf::Vector2f mouse_pos = mainWindow->mapPixelToCoords(sf::Mouse::getPosition(*mainWindow)); // Mouse::getPosition(*mainWindow);
+
+        sf::Event event;
+        while ((*mainWindow).pollEvent(event))
+        {
+            if (event.type == sf::Event::Closed)
+            {
+                (*mainWindow).close();
+            }
+            else if (event.type == sf::Event::KeyPressed)
+            {
+                if (current_level != nullptr) // ingame
+                {
+                    if (event.key.code == Keyboard::Key::Escape)
+                    {
+                        game_paused = !game_paused;
+                    }
+
+                    current_level->handlePolledKeyInput(event);
+                }
+                
+            }
+            else if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
+            {
+                if (current_level != nullptr)
+                {
+                    current_level->handleClick(mouse_pos);
+                } 
+            }
+            else if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left)
+            {
+                if (current_level != nullptr)
+                {
+                    current_level->handleRelease();
+                }
+            }
+            else if (event.type == sf::Event::Resized)
+            {
+                if (event.size.width < 800 || event.size.height < 600)
+                {
+                    mainWindow->setSize(sf::Vector2u(800, 600));
+                }
+                updateControlPanelPosition(control_panel, *mainWindow);
+            }
+
+            gui.handleEvent(event);
+        }
+
+
+        if (current_level != nullptr)
+        {
+            current_level->handleInstantKeyInput(deltaTime);
+            current_level->updateMouseParticlePosition(mouse_pos);
+            current_level->handleDrag(mouse_pos);
+        }
+
+        (*mainWindow).clear(current_level == nullptr ? sf::Color::Black : current_level->background_color_);
+        
+        if (current_level != nullptr)
+        {
+            current_level->draw(*mainWindow, deltaTime);
+        }
+
+        control_panel->setVisible(gui_visible);
+        gui.draw();
+
+        (*mainWindow).display();
+    }
+
+    return 0;
+}
+
+tgui::Panel::Ptr createControlPanel(sf::RenderWindow& window)
+{
+    auto panel = tgui::Panel::create();
+    panel->getRenderer()->setBackgroundColor(sf::Color(0, 0, 255, 128));
+
     tgui::Label::Ptr traversalSpeedLabel = tgui::Label::create();
     traversalSpeedLabel->setText("PI: Traversal Speed:");
     traversalSpeedLabel->setPosition(220, 10);
@@ -190,7 +307,6 @@ void createPathInterpolationPanel(tgui::Panel::Ptr panel, sf::RenderWindow& wind
     trailHistorySlider->setPosition(10, 260);
     trailHistorySlider->onValueChange.connect([trailHistoryValueLabel](int value)
     { 
-        printf("%d\n", value);
         ParticleDynamics::trail_seconds = value; 
         trailHistoryValueLabel->setText(std::to_string(ParticleDynamics::trail_seconds));
     });
@@ -216,146 +332,13 @@ void createPathInterpolationPanel(tgui::Panel::Ptr panel, sf::RenderWindow& wind
         panelSize.y = std::max(panelSize.y, widget->getPosition().y + widget->getSize().y);
     }
     panel->setSize(tgui::Layout2d(panelSize.x, panelSize.y+5));
+    updateControlPanelPosition(panel, window);
 
-    // Position the panel widget at the top right of the window with a margin of 10 pixels
+    return panel;
+}
+
+void updateControlPanelPosition(tgui::Panel::Ptr panel, sf::RenderWindow& window)
+{
+    // Position the panel widget at the top right of the window with a margin of 10 pixels    
     panel->setPosition(window.getSize().x - panel->getSize().x - 10, 10);
-}
-
-void createToggleButtons(tgui::Panel::Ptr panel, tgui::Gui& gui)
-{
-     // Create the toggle button
-    auto toggleButton = tgui::Button::create();
-    toggleButton->setText("Toggle GUI");
-    toggleButton->setSize(100, 30);
-    toggleButton->setPosition(10, 10);
-
-    // Add the button to the GUI
-    gui.add(toggleButton);
-
-    // Connect the button to the function that will toggle the GUI
-    toggleButton->onClick.connect([&](){
-        gui_visible = !gui_visible;
-    });
-}
-
-void animation_loop()
-{
-    float deltaTime = 0.0f;
-    Clock clock;
-
-    while((*mainWindow).isOpen())
-    {
-        if (game_paused) {
-            clock.restart().asSeconds();
-            continue;
-        }
-        
-        deltaTime = clock.restart().asSeconds();
-
-        if (current_level != nullptr) current_level->update(deltaTime);
-
-        // subtract time needed for calculations
-        usleep((1000000 / animation_update_rate) - clock.getElapsedTime().asMicroseconds());
-    }
-}
-
-int main()
-{
-    mainWindow = new sf::RenderWindow(sf::VideoMode(WIDTH, HEIGTH), "Magnity!");
-    (*mainWindow).setFramerateLimit(fps);
-    View view(sf::FloatRect(0.f, 0.f, (float) WIDTH, (float) HEIGTH));
-    mainWindow->setView(view);
-
-    // GUI
-    tgui::GuiSFML gui(*mainWindow);
-
-    // Create a panel to serve as the background of the GUI
-    tgui::Panel::Ptr panel = tgui::Panel::create();
-    panel->setSize("100%", "100%");
-    panel->getRenderer()->setBackgroundColor(sf::Color(0, 0, 255, 128));
-    gui.add(panel);
-
-    createPathInterpolationPanel(panel, *mainWindow);
-    createToggleButtons(panel, gui);
-
-
-    current_level = Level::LoadLevel1(view);
-
-    animation_loop_thread = std::thread(animation_loop);
-
-    float deltaTime = 0.0f;
-    Clock clock;
-    while ((*mainWindow).isOpen())
-    {
-        deltaTime = clock.restart().asSeconds();
-        sf::Vector2f mouse_pos = mainWindow->mapPixelToCoords(sf::Mouse::getPosition(*mainWindow)); // Mouse::getPosition(*mainWindow);
-
-        sf::Event event;
-        while ((*mainWindow).pollEvent(event))
-        {
-            if (event.type == sf::Event::Closed)
-            {
-                (*mainWindow).close();
-            }
-            else if (event.type == sf::Event::KeyPressed)
-            {
-                if (event.key.code == Keyboard::Key::Escape)
-                {
-                    game_paused = !game_paused;
-                }
-
-                if (current_level != nullptr)
-                {
-                    current_level->handlePolledKeyInput(event);
-                }
-            }
-            else if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
-            {
-                getClickedControlPoint(current_level, mouse_pos, &ctrl_point_to_drag, &ctrl_sprite_to_drag, &ctrl_spline_to_drag); 
-            }
-            else if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left)
-            {
-                ctrl_point_to_drag = nullptr;
-                ctrl_sprite_to_drag = nullptr;
-                ctrl_spline_to_drag = nullptr;     
-            }
-            else if (event.type == sf::Event::Resized)
-            {
-                if (event.size.width < 800 || event.size.height < 600)
-                {
-                    mainWindow->setSize(sf::Vector2u(800, 600));
-                }
-            }
-
-            gui.handleEvent(event);
-        }
-
-        if (ctrl_point_to_drag != nullptr)
-        {
-            sf::Vector2f mouse = mainWindow->mapPixelToCoords(sf::Mouse::getPosition(*mainWindow));
-            *ctrl_point_to_drag = mouse;
-            ctrl_sprite_to_drag->setPosition(mouse - sf::Vector2f(4, 4));
-            ctrl_spline_to_drag->init();
-        }
-
-        if (current_level != nullptr)
-        {
-            current_level->handleInstantKeyInput(deltaTime);
-            current_level->updateMouseParticlePosition(mouse_pos);
-        }
-
-        (*mainWindow).clear();
-        
-        if (current_level != nullptr)
-        {
-            current_level->draw(*mainWindow, deltaTime);
-        }
-
-        panel->setVisible(gui_visible);
-        gui.draw();
-
-        (*mainWindow).display();
-    }
-
-    return 0;
 }
