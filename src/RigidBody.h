@@ -7,6 +7,7 @@
 #include <SFML/Graphics.hpp>
 #include <cmath>
 #include "Quaternion.h"
+#include <unistd.h>
 #include "Matrix.h"
 #include "Border.h"
 #include <vector>
@@ -29,7 +30,7 @@ class RigidBody {
         Matrix calcIbody() const;
         Matrix calcIinversebody();
         static void DisplayBodies(sf::RenderWindow &window, std::vector<RigidBody*> *rigid_bodies);
-        static void ode(std::vector<RigidBody*> *y0, std::vector<RigidBody> *yEnd, int len, double t0, double t1);
+        static void ode(std::vector<RigidBody*> *y0, std::vector<RigidBody> *yEnd, int len, double t0, double t1, std::vector<RigidBody*>* rigid_bodies, std::vector<Border*> obstacles);
         sf::Vector3<double> normalizeVector(sf::Vector3<double> vec);
         void checkForCollisions(std::vector<RigidBody*>* rigid_bodies, std::vector<Border*> obstacles);
         static void applyVelocityVerletIntegration(RigidBody* rigid_body0, RigidBody* rigid_body1, double timestep);
@@ -56,6 +57,7 @@ class RigidBody {
         sf::RectangleShape body;
         unsigned int type;
         double radius;
+        bool collision_found = false;
     private:
 
     ////spatial variables

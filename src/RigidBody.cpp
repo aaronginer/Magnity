@@ -1,14 +1,12 @@
 #include "RigidBody.h"
 #include <iostream>
 #include <SFML/Graphics.hpp>
-#include <unistd.h>
 #include "math.h"
 
-#define M_PI 3.14159265358979323846
-#define NUM_RIGID_BODIES 2
 //array of rigid bodies
 unsigned int highest_id = 0;
-bool collision = false;
+
+//TODO: see forum for Rigid Body
 
 RigidBody::RigidBody(double mass, double density, unsigned int type, double width, double height, const sf::Texture& texture,
                      bool fixed, double posX, double posY) {
@@ -19,27 +17,31 @@ RigidBody::RigidBody(double mass, double density, unsigned int type, double widt
     this->mass = mass;
     if(type == 0) {
         radius = this->height / 2.0f;
-        this->body.setOrigin(radius, radius);
-        this->Inertia = (this->mass * (radius * radius)) / 2;
+        this->body.setOrigin((float)radius, (float)radius);
+        this->Inertia = (this->mass * (radius * radius)) / 2.0;
         //FROM WIKIPEDIA
     }
     else {
-        this->body.setOrigin(width / 2.0f, height / 2.0f);
+        this->body.setOrigin((float)width / 2.0f, (float)height / 2.0f);
         this->Inertia = (this->mass * ((this->width * this->width) + (this->height + this->height))) / 12;
 
         radius = this->height / 2.0f;
-        this->body.setOrigin(radius, radius);
-        this->Inertia = (this->mass * (radius * radius)) / 2;
+        this->body.setOrigin((float)radius, (float)radius);
+        this->Inertia = (this->mass * (radius * radius)) / 2.0;
         //FROM WIKIPEDIA
     }
     this->body.setSize({(float)height, (float)width});
     this->body.setTexture(&texture);
     this->x = sf::Vector3<double>(posX, posY, 0.0f);
-    this->body.setPosition(posX, posY);
+    this->body.setPosition((float)posX, (float)posY);
     highest_id++;
     this->Ibody = this->calcIbody();
     this->P = sf::Vector3<double>(0,0,0);
     this->L = 0.0;
+    this->angular_acceleration = 0.0;
+    this->w = 0.0f;
+    this->torque = 0.0f;
+    this->collision_found = false;
 }
 
 void RigidBody::DisplayBodies(sf::RenderWindow &window, std::vector<RigidBody*> *rigid_bodies) {
@@ -60,7 +62,7 @@ sf::Vector3<double> RigidBody::calcCrossProd(sf::Vector3<double> vec1, sf::Vecto
 
 void RigidBody::ComputeForceAndTorque(RigidBody *rb) {
     //compute all forces
-
+    //TODO: check where player magnates are and compute force accordingly
     if(rb->type == 1) {
         rb->force = sf::Vector3<double>(rb->force.x, -100.00f * rb->mass, rb->force.z);
     }
@@ -68,8 +70,7 @@ void RigidBody::ComputeForceAndTorque(RigidBody *rb) {
         rb->force = sf::Vector3<double>(rb->force.x, 150.0f * rb->mass, rb->force.z);
     }
 
-    //TODO: Update Inertia vector ?
-
+    //TODO: here we need to check for collisions!
 
     std::cout << std::endl;
 }
@@ -99,6 +100,7 @@ void RigidBody::applyVelocityVerletIntegration(RigidBody* rigid_body0, RigidBody
     sf::Vector3<double> tmp = sf::Vector3<double>(0.5 * rigid_body0->linear_acceleration.x * timestep2, 0.5 * rigid_body0->linear_acceleration.y * timestep2,
                                     0.5 * rigid_body0->linear_acceleration.z * timestep2);
 
+    //get next position of rigid body
     rigid_body1->x = rigid_body0->x + sf::Vector3<double>(tmp_velocity.x + tmp.x, tmp_velocity.y + tmp.y, tmp_velocity.z + tmp.z);
 
     //calculate forces, the NOW act on rigid body
@@ -110,7 +112,7 @@ void RigidBody::applyVelocityVerletIntegration(RigidBody* rigid_body0, RigidBody
     //3. Update linear Velocity
     sf::Vector3<double> sum_accelerations = (rigid_body0->linear_acceleration + rigid_body1->linear_acceleration);
     rigid_body1->v = rigid_body0->v + sf::Vector3<double>(0.5 * sum_accelerations.x * timestep, 0.5 * sum_accelerations.y * timestep,
-                                                 0.5 * sum_accelerations.z * timestep);
+                                                          0.5 * sum_accelerations.z * timestep);
 }
 
 //x0 = init state vector
@@ -121,7 +123,7 @@ void RigidBody::applyVelocityVerletIntegration(RigidBody* rigid_body0, RigidBody
 //function dxdt -> has array x that encodes state vector x(t), it must returnd d/dt x(t) in the xdot
 //we need t in dxdt because we may have time varying forces
 //ode can call dxdt as often as it likes
-void RigidBody::ode(std::vector<RigidBody*> *y0, std::vector<RigidBody> *yEnd, int len, double t0, double t1) {
+void RigidBody::ode(std::vector<RigidBody*> *y0, std::vector<RigidBody> *yEnd, int len, double t0, double t1, std::vector<RigidBody*>* rigid_bodies, std::vector<Border*> obstacles) {
     //Compute current state of object
 
     double timestep = t1 - t0;
@@ -132,20 +134,26 @@ void RigidBody::ode(std::vector<RigidBody*> *y0, std::vector<RigidBody> *yEnd, i
         // apply forces and update linear
         std::cout << std::endl;
         applyVelocityVerletIntegration(y0->at(i), &yEnd->at(i), timestep);
-
-        //2. update angular momentum, angular acceleration, angular velocity
-        yEnd->at(i).angular_acceleration = double(calcMagnitude(y0->at(i)->torque_vec) / y0->at(i)->Inertia);
-
-        yEnd->at(i).w += y0->at(i)->angular_acceleration * timestep;
-
-        yEnd->at(i).L = y0->at(i)->Inertia * y0->at(i)->w;
-
-        std::cout << "angular Velocity = " << yEnd->at(i).w << std::endl;
+        //rigid bodies were updated -> now check for collisions at new position
+        if(!yEnd->at(i).collision_found) {
+            yEnd->at(i).checkForCollisions(rigid_bodies, obstacles);
+        }
+        else {
+            yEnd->at(i).collision_found = false;
+        }
 
         //Update y0
 
+        //2. update angular momentum, angular acceleration, angular velocity
+        yEnd->at(i).angular_acceleration = y0->at(i)->torque_vec.z / y0->at(i)->Inertia;
+        yEnd->at(i).w += y0->at(i)->angular_acceleration * timestep;
+
+        //TODO: is this damping good?
+        float damping = 0.01f * yEnd->at(i).mass; // Adjust this value to control the rate of damping
+        yEnd->at(i).w -= damping * yEnd->at(i).w * timestep;
+
         y0->at(i)->body.setPosition(yEnd->at(i).x.x, yEnd->at(i).x.y);
-        y0->at(i)->body.rotate(y0->at(i)->body.getRotation() + y0->at(0)->L);
+        y0->at(i)->body.rotate(yEnd->at(i).w);
 
 
         //save old state
@@ -164,10 +172,6 @@ void RigidBody::ode(std::vector<RigidBody*> *y0, std::vector<RigidBody> *yEnd, i
 
     }
 
-    //if(collision) {
-    //    sleep(5);
-    //}
-
 }
 
 sf::Vector3<double> RigidBody::normalizeVector(sf::Vector3<double> vec) {
@@ -182,61 +186,27 @@ void RigidBody::checkForCollisions(std::vector<RigidBody*> *rigid_bodies, std::v
     //go through all objects and check for collisions
     //TODO: make this easier with just the distance between circles
     //TODO: with border just check y coordinate
-    for(int i = 0; i < rigid_bodies->size(); i++) {
+    for (int i = 0; i < rigid_bodies->size(); i++) {
 
         //check if object is touching borders / obstacles
-        for(int j = 0; j < obstacles.size(); j++) {
+        for (int j = 0; j < obstacles.size(); j++) {
             double distance = ::fabsf(rigid_bodies->at(i)->x.y - obstacles.at(j)->getPosition().y);
-            if (distance < (rigid_bodies->at(i)->radius + (obstacles.at(j)->getShape().getSize().y))) {
+            if (distance <
+                (rigid_bodies->at(i)->radius + (obstacles.at(j)->getShape().getSize().y))) { //TODO: look at this again
 
-                std::cout << "------------------------------" << std::endl;
-                std::cout << "Rigid POS   (" << rigid_bodies->at(i)->x.x << ", " << rigid_bodies->at(i)->x.y << ")" << std::endl;
-                std::cout << "Border POS   (" << obstacles.at(j)->getPosition().x << ", " << obstacles.at(j)->getPosition().y << ")" << std::endl;
-                std::cout << "Distance = " << distance << std::endl;
-                std::cout << "Radius + height / 2 = " << (rigid_bodies->at(i)->radius + (obstacles.at(j)->getShape().getSize().y)) << std::endl;
+                if (obstacles.at(j)->getCollisionPointDir() == 0) { // this bottom border
 
-                if(obstacles.at(j)->getCollisionPointDir() == 0) { // this bottom border
-
-                    std::cout << "BOTTOM" << std::endl;
-                    rigid_bodies->at(i)->x.y = obstacles.at(j)->getPosition().y + (obstacles.at(j)->getShape().getSize().y) + rigid_bodies->at(i)->radius;
+                    rigid_bodies->at(i)->x.y =
+                            obstacles.at(j)->getPosition().y + (obstacles.at(j)->getShape().getSize().y) +
+                            rigid_bodies->at(i)->radius;
 
                     sf::Vector3<double> obstacle3d = sf::Vector3<double>(obstacles.at(j)->getPosition().x,
-                                                           obstacles.at(j)->getPosition().y, 0.0f);
+                                                                         obstacles.at(j)->getPosition().y, 0.0f);
 
                     //calculate normal
                     sf::Vector3<double> normal = normalizeVector(rigid_bodies->at(i)->x - obstacle3d);
-                    sf::Vector3<double> normal2 = sf::Vector3<double>(normal.x * normal.x, normal.y * normal.y, normal.z * normal.z);
-                    //calculate impulse -> new velocities
-                    sf::Vector3<double> oldVelocity1 = rigid_bodies->at(i)->v - sf::Vector3<double>(0.0f, 0.0f, 0.0f);
-
-                    double divMass1 = (2 * 500) / (rigid_bodies->at(i)->mass + 500);
-                    double divMass2 = (2 * rigid_bodies->at(i)->mass) / (rigid_bodies->at(i)->mass + 500);
-
-                    sf::Vector3<double> v1_v2 = oldVelocity1; //velocity of v2 is 0 - it is fixed
-
-                    sf::Vector3<double> right_side1 = sf::Vector3<double>(v1_v2.x * divMass1, v1_v2.y * divMass1, v1_v2.z * divMass1);
-                    right_side1 = sf::Vector3<double>(right_side1.x * normal2.x, right_side1.y * normal2.y,
-                                               right_side1.z * normal2.z);
-
-                    rigid_bodies->at(i)->v = oldVelocity1 - right_side1;
-
-                    std::cout << "New Position    (" << rigid_bodies->at(i)->x.x << ", " << rigid_bodies->at(i)->x.y << ")" << std::endl;
-                    std::cout << "New Distance = " << ::fabsf(rigid_bodies->at(i)->x.y - obstacles.at(j)->getPosition().y) << std::endl;
-
-                    std::cout << "------------------------------" << std::endl;
-                }
-                else if(obstacles.at(j)->getCollisionPointDir() == 2) { // top border
-
-                    std::cout << "TOP" << std::endl;
-
-                    rigid_bodies->at(i)->x.y = obstacles.at(j)->getPosition().y - (obstacles.at(j)->getShape().getSize().y) - rigid_bodies->at(i)->radius;
-
-                    sf::Vector3<double> obstacle3d = sf::Vector3<double>(obstacles.at(j)->getPosition().x,
-                                                           obstacles.at(j)->getPosition().y, 0.0f);
-
-                    //calculate normal
-                    sf::Vector3<double> normal = normalizeVector(rigid_bodies->at(i)->x - obstacle3d);
-                    sf::Vector3<double> normal2 = sf::Vector3<double>(normal.x * normal.x, normal.y * normal.y, normal.z * normal.z);
+                    sf::Vector3<double> normal2 = sf::Vector3<double>(normal.x * normal.x, normal.y * normal.y,
+                                                                      normal.z * normal.z);
                     //calculate impulse -> new velocities
                     sf::Vector3<double> oldVelocity1 = rigid_bodies->at(i)->v - sf::Vector3<double>(0.0f, 0.0f, 0.0f);
 
@@ -244,24 +214,46 @@ void RigidBody::checkForCollisions(std::vector<RigidBody*> *rigid_bodies, std::v
 
                     sf::Vector3<double> v1_v2 = oldVelocity1; //velocity of v2 is 0 - it is fixed
 
-                    sf::Vector3<double> right_side1 = sf::Vector3<double>(v1_v2.x * divMass1, v1_v2.y * divMass1, v1_v2.z * divMass1);
+                    sf::Vector3<double> right_side1 = sf::Vector3<double>(v1_v2.x * divMass1, v1_v2.y * divMass1,
+                                                                          v1_v2.z * divMass1);
                     right_side1 = sf::Vector3<double>(right_side1.x * normal2.x, right_side1.y * normal2.y,
-                                               right_side1.z * normal2.z);
+                                                      right_side1.z * normal2.z);
 
                     rigid_bodies->at(i)->v = oldVelocity1 - right_side1;
+                } else if (obstacles.at(j)->getCollisionPointDir() == 2) { // top border
 
-                    std::cout << "New Position    (" << rigid_bodies->at(i)->x.x << ", " << rigid_bodies->at(i)->x.y << ")" << std::endl;
-                    std::cout << "New Distance = " << ::fabsf(rigid_bodies->at(i)->x.y - obstacles.at(j)->getPosition().y) << std::endl;
+                    rigid_bodies->at(i)->x.y =
+                            obstacles.at(j)->getPosition().y - (obstacles.at(j)->getShape().getSize().y) -
+                            rigid_bodies->at(i)->radius;
 
-                    std::cout << "------------------------------" << std::endl;
+                    sf::Vector3<double> obstacle3d = sf::Vector3<double>(obstacles.at(j)->getPosition().x,
+                                                                         obstacles.at(j)->getPosition().y, 0.0f);
+
+                    //calculate normal
+                    sf::Vector3<double> normal = normalizeVector(rigid_bodies->at(i)->x - obstacle3d);
+                    sf::Vector3<double> normal2 = sf::Vector3<double>(normal.x * normal.x, normal.y * normal.y,
+                                                                      normal.z * normal.z);
+                    //calculate impulse -> new velocities
+                    sf::Vector3<double> oldVelocity1 = rigid_bodies->at(i)->v - sf::Vector3<double>(0.0f, 0.0f, 0.0f);
+
+                    double divMass1 = (2 * 500) / (rigid_bodies->at(i)->mass + 500);
+
+                    sf::Vector3<double> v1_v2 = oldVelocity1; //velocity of v2 is 0 - it is fixed
+
+                    sf::Vector3<double> right_side1 = sf::Vector3<double>(v1_v2.x * divMass1, v1_v2.y * divMass1,
+                                                                          v1_v2.z * divMass1);
+                    right_side1 = sf::Vector3<double>(right_side1.x * normal2.x, right_side1.y * normal2.y,
+                                                      right_side1.z * normal2.z);
+
+                    rigid_bodies->at(i)->v = oldVelocity1 - right_side1;
                 }
             }
         }
 
 
         //check if object is touching other rigid body
-        for(int j = 0; j < rigid_bodies->size(); j++) {
-            if(j == i) {
+        for (int j = 0; j < rigid_bodies->size(); j++) {
+            if (j == i) {
                 continue;
             }
 
@@ -269,100 +261,112 @@ void RigidBody::checkForCollisions(std::vector<RigidBody*> *rigid_bodies, std::v
                                         std::pow(rigid_bodies->at(j)->x.y - rigid_bodies->at(i)->x.y, 2));
 
 
-            if(distance <= (rigid_bodies->at(i)->radius + rigid_bodies->at(j)->radius)) {
-                collision = true;
-                std::cout << "Rigid Body " << i << " is colliding with rigid body ";
-                std::cout << j << std::endl;
-                std::cout << "Rigid body " << i << "  (" << rigid_bodies->at(i)->x.x << ", " << rigid_bodies->at(i)->x.y << ")" << std::endl;
-                std::cout << "Rigid body " << j << "  (" << rigid_bodies->at(j)->x.x << ", " << rigid_bodies->at(j)->x.y << ")" << std::endl;
-                std::cout << "Distance " << distance << std::endl;
-                std::cout << "Sum of radius' = " << (rigid_bodies->at(i)->radius + rigid_bodies->at(j)->radius) << std::endl;
+            if (distance <= (rigid_bodies->at(i)->radius + rigid_bodies->at(j)->radius)) {
 
-                while(distance < (rigid_bodies->at(i)->radius + rigid_bodies->at(j)->radius)) {
+                /*while (distance < (rigid_bodies->at(i)->radius + rigid_bodies->at(j)->radius)) {
                     rigid_bodies->at(i)->x.x = rigid_bodies->at(i)->x.x - (rigid_bodies->at(i)->v.x * 0.0001);
                     rigid_bodies->at(i)->x.y = rigid_bodies->at(i)->x.y - (rigid_bodies->at(i)->v.y * 0.0001);
                     distance = std::sqrt(std::pow(rigid_bodies->at(j)->x.x - rigid_bodies->at(i)->x.x, 2) +
                                          std::pow(rigid_bodies->at(j)->x.y - rigid_bodies->at(i)->x.y, 2));
+                }*/
+
+                while (distance < (rigid_bodies->at(i)->radius + rigid_bodies->at(j)->radius)) {
+                    rigid_bodies->at(i)->x.x = rigid_bodies->at(i)->x.x - (rigid_bodies->at(i)->v.x * 0.0001f);
+                    rigid_bodies->at(i)->x.y = rigid_bodies->at(i)->x.y - (rigid_bodies->at(i)->v.y * 0.0001f);
+                    distance = std::sqrt(std::pow(rigid_bodies->at(j)->x.x - rigid_bodies->at(i)->x.x, 2) +
+                                         std::pow(rigid_bodies->at(j)->x.y - rigid_bodies->at(i)->x.y, 2));
                 }
 
-                std::cout << "New POS Rigid body " << i << "  (" << rigid_bodies->at(i)->x.x << ", " << rigid_bodies->at(i)->x.y << ")" << std::endl;
+                //sleep(5);
 
 
-                sf::Vector3<double> collision_point = sf::Vector3<double>(
-                        rigid_bodies->at(i)->x.x + ((distance - rigid_bodies->at(i)->radius) * (rigid_bodies->at(j)->x.x - rigid_bodies->at(i)->x.x)
-                        / (rigid_bodies->at(i)->radius + rigid_bodies->at(j)->radius)),
-                        rigid_bodies->at(i)->x.y + ((distance - rigid_bodies->at(i)->radius) * (rigid_bodies->at(j)->x.y - rigid_bodies->at(i)->x.y)
-                                                   / (rigid_bodies->at(i)->radius + rigid_bodies->at(j)->radius)), 0.0f
-                        );
+                /*sf::Vector3<double> collision_point = sf::Vector3<double>(
+                        rigid_bodies->at(i)->x.x + ((distance - rigid_bodies->at(i)->radius) *
+                                                    (rigid_bodies->at(j)->x.x - rigid_bodies->at(i)->x.x)
+                                                    / (rigid_bodies->at(i)->radius + rigid_bodies->at(j)->radius)),
+                        rigid_bodies->at(i)->x.y + ((distance - rigid_bodies->at(i)->radius) *
+                                                    (rigid_bodies->at(j)->x.y - rigid_bodies->at(i)->x.y)
+                                                    / (rigid_bodies->at(i)->radius + rigid_bodies->at(j)->radius)), 0.0f
+                );*/
 
-                std::cout << "Collision Point  (" << collision_point.x << ", " << collision_point.y << ")" << std::endl;
+                sf::Vector3<double> collision_point = (rigid_bodies->at(i)->x * rigid_bodies->at(j)->radius +
+                                                       rigid_bodies->at(j)->x * rigid_bodies->at(i)->radius) /
+                                                      (rigid_bodies->at(i)->radius + rigid_bodies->at(j)->radius);
 
                 //calculate normal
                 sf::Vector3<double> normal = normalizeVector(rigid_bodies->at(i)->x - rigid_bodies->at(j)->x);
-                std::cout << "Normal  (" << normal.x << ", " << normal.y << ")" << std::endl;
 
-                sf::Vector3<double> normal2 = sf::Vector3<double>(normal.x * normal.x, normal.y * normal.y, normal.z * normal.z);
+                sf::Vector3<double> normal2 = sf::Vector3<double>(normal.x * normal.x, normal.y * normal.y,
+                                                                  normal.z * normal.z);
                 //calculate impulse -> new velocities
-                sf::Vector3<double> oldVelocity1 = rigid_bodies->at(i)->v;
-                sf::Vector3<double> oldVelocity2 = rigid_bodies->at(j)->v;
+                sf::Vector3<double> v1_v2 = rigid_bodies->at(i)->v - rigid_bodies->at(j)->v;
 
-                std::cout << "Linear Velocity RB " << i << "  (" << oldVelocity1.x << ", " << oldVelocity1.y << ", " << oldVelocity1.z << ")" << std::endl;
-                std::cout << "Linear Velocity RB " << j << "  (" << oldVelocity2.x << ", " << oldVelocity2.y << ", " << oldVelocity2.z << ")" << std::endl;
+                double divMass1 =
+                        (2 * rigid_bodies->at(j)->mass) / (rigid_bodies->at(i)->mass + rigid_bodies->at(j)->mass);
+                double divMass2 =
+                        (2 * rigid_bodies->at(i)->mass) / (rigid_bodies->at(i)->mass + rigid_bodies->at(j)->mass);
 
-                std::cout << "Angular Velocity RB " << i << " = " << rigid_bodies->at(i)->w << std::endl;
-                std::cout << "Angular Velocity RB " << j << " = " << rigid_bodies->at(j)->w << std::endl;
 
-                double divMass1 = (2 * rigid_bodies->at(j)->mass) / (rigid_bodies->at(i)->mass + rigid_bodies->at(j)->mass);
-                double divMass2 = (2 * rigid_bodies->at(i)->mass) / (rigid_bodies->at(i)->mass + rigid_bodies->at(j)->mass);
+                sf::Vector3<double> right_side1 = sf::Vector3<double>(v1_v2.x * divMass1, v1_v2.y * divMass1,
+                                                                      v1_v2.z * divMass1);
+                right_side1 = sf::Vector3<double>(right_side1.x * normal2.x, right_side1.y * normal2.y,
+                                                  right_side1.z * normal2.z);
 
-                sf::Vector3<double> v1_v2 = oldVelocity1 - oldVelocity2;
-
-                sf::Vector3<double> right_side1 = sf::Vector3<double>(v1_v2.x * divMass1, v1_v2.y * divMass1, v1_v2.z * divMass1);
-                right_side1 = sf::Vector3<double>(right_side1.x * normal2.x, right_side1.y * normal2.y, right_side1.z * normal2.z);
-
-                sf::Vector3<double> right_side2 = sf::Vector3<double>(v1_v2.x * divMass2, v1_v2.y * divMass2, v1_v2.z * divMass2);
-                right_side2 = sf::Vector3<double>(right_side2.x * normal2.x, right_side2.y * normal2.y, right_side2.z * normal2.z);
-
-                rigid_bodies->at(i)->v = oldVelocity1 - right_side1;
-                rigid_bodies->at(j)->v = oldVelocity2 + right_side2;
+                sf::Vector3<double> right_side2 = sf::Vector3<double>(v1_v2.x * divMass2, v1_v2.y * divMass2,
+                                                                      v1_v2.z * divMass2);
+                right_side2 = sf::Vector3<double>(right_side2.x * normal2.x, right_side2.y * normal2.y,
+                                                  right_side2.z * normal2.z);
 
                 //calculate J = j * n for Torque
                 sf::Vector3<double> r1 = collision_point - rigid_bodies->at(i)->x;
                 sf::Vector3<double> r2 = collision_point - rigid_bodies->at(j)->x;
 
-
-                sf::Vector3<double> p1 = oldVelocity1 + calcCrossProd(r1, sf::Vector3<double>(0.0, 0.0, rigid_bodies->at(i)->w));
-                sf::Vector3<double> p2 = oldVelocity2 + calcCrossProd(r1, sf::Vector3<double>(0.0, 0.0, rigid_bodies->at(j)->w));
+                //-------------------------------------- from old code -----------------------------------------
+                sf::Vector3<double> p1 = rigid_bodies->at(i)->v + calcCrossProd(r1, sf::Vector3<double>(0.0, 0.0, rigid_bodies->at(i)->w));
+                sf::Vector3<double> p2 = rigid_bodies->at(j)->v + calcCrossProd(r1, sf::Vector3<double>(0.0, 0.0, rigid_bodies->at(j)->w));
 
                 sf::Vector3<double> p1_p2 = p1 - p2;
-
-                std::cout << "p1-p2  (" << p1_p2.x << ", " << p1_p2.y << ", " << p1_p2.z << ")" << std::endl;
 
                 double dividend = -2 * ( (p1_p2.x * normal.x) + (p1_p2.y * normal.y) + (p1_p2.z * normal.z) );
                 double divisor = std::pow(rigid_bodies->at(i)->mass, -1) + std::pow(rigid_bodies->at(j)->mass, -1);
 
                 double j_imp = dividend / divisor;
 
-                std::cout << "j = " << j_imp << std::endl;
-
                 sf::Vector3<double> J = sf::Vector3<double>(normal.x * j_imp, normal.y * j_imp, normal.z * j_imp);
+                //----------------------------------------------------------------------------------------------
 
-                std::cout << "J  (" << J.x << ", " << J.y << ", " << J.z << ")" << std::endl;
-                std::cout << "r1  (" << r1.x << ", " << r1.y << ", " << r1.z << ")" << std::endl;
-                std::cout << "r2  (" << r2.x << ", " << r2.y << ", " << r2.z << ")" << std::endl;
+                //update linear momentum
+                //rigid_bodies->at(i)->P += right_side1;
+                //rigid_bodies->at(j)->P -= right_side2;
+
+                std::cout << "Before Linear velocity  Rigid body " << i << "  (" << rigid_bodies->at(i)->v.x << ", " << rigid_bodies->at(i)->v.y << ", " << rigid_bodies->at(i)->v.z << ")" << std::endl;
+                std::cout << "Before Linear velocity  Rigid body " << j << "  (" << rigid_bodies->at(j)->v.x << ", " << rigid_bodies->at(j)->v.y << ", " << rigid_bodies->at(j)->v.z << ")" << std::endl;
+
+                rigid_bodies->at(i)->v = rigid_bodies->at(i)->v + J;
+                rigid_bodies->at(j)->v = rigid_bodies->at(j)->v  - J;
 
                 //set torque vector
-                rigid_bodies->at(i)->torque_vec = calcCrossProd(r1, J);
-                rigid_bodies->at(j)->torque_vec = calcCrossProd(r2, -J);
+                rigid_bodies->at(i)->torque_vec = calcCrossProd(r1, right_side1);
+                rigid_bodies->at(j)->torque_vec = calcCrossProd(r2, -right_side2);
 
-                std::cout << "Torque  (" << rigid_bodies->at(i)->torque_vec.x << ", " << rigid_bodies->at(i)->torque_vec.y << ", " << rigid_bodies->at(i)->torque_vec.z << ")" << std::endl;
+                //update angular momentum
+                rigid_bodies->at(i)->L += rigid_bodies->at(i)->torque_vec.z;
+                rigid_bodies->at(j)->L += rigid_bodies->at(j)->torque_vec.z;
+
+                rigid_bodies->at(j)->collision_found = true;
+
+                std::cout << "R1 " << "  (" << r1.x << ", " << r1.y << ", " << r1.z << ")" << std::endl;
+                std::cout << "R2 " << "  (" << r2.x << ", " << r2.y << ", " << r2.z << ")" << std::endl;
+                std::cout << "right_side1 " << "  (" << right_side1.x << ", " << right_side1.y << ", " << right_side1.z << ")" << std::endl;
+                std::cout << "right_side2 " << "  (" << right_side2.x << ", " << right_side2.y << ", " << right_side2.z << ")" << std::endl;
+                std::cout << "Linear velocity  Rigid body " << i << "  (" << rigid_bodies->at(i)->v.x << ", " << rigid_bodies->at(i)->v.y << ", " << rigid_bodies->at(i)->v.z << ")" << std::endl;
+                std::cout << "Linear velocity  Rigid body " << j << "  (" << rigid_bodies->at(j)->v.x << ", " << rigid_bodies->at(j)->v.y << ", " << rigid_bodies->at(j)->v.z << ")" << std::endl;
+                std::cout << "Torque  Rigid body " << i << "  (" << rigid_bodies->at(i)->torque_vec.x << ", " << rigid_bodies->at(i)->torque_vec.y << ", " << rigid_bodies->at(i)->torque_vec.z << ")" << std::endl;
+                std::cout << "Torque  Rigid body " << j << "  (" << rigid_bodies->at(j)->torque_vec.x << ", " << rigid_bodies->at(j)->torque_vec.y << ", " << rigid_bodies->at(j)->torque_vec.z << ")" << std::endl;
+                std::cout << "Angular momentum  Rigid body " << i << "  = " << rigid_bodies->at(i)->L << std::endl;
+                std::cout << "Angular momentum  Rigid body " << j << "  = " << rigid_bodies->at(j)->L << std::endl;
+
                 //sleep(5);
-
-                rigid_bodies->at(i)->w = rigid_bodies->at(i)->torque_vec.z;
-                rigid_bodies->at(j)->w = rigid_bodies->at(j)->torque_vec.z;
-
-                rigid_bodies->at(i)->v = J;
-                rigid_bodies->at(j)->v = -J;
 
                 std::cout << "-----------------------------" << std::endl;
             }
