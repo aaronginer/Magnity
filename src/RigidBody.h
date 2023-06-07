@@ -34,6 +34,7 @@ class RigidBody {
         sf::Vector3<double> normalizeVector(sf::Vector3<double> vec);
         void checkForCollisions(std::vector<RigidBody*>* rigid_bodies, std::vector<Border*> obstacles);
         static void applyVelocityVerletIntegration(RigidBody* rigid_body0, RigidBody* rigid_body1, double timestep);
+        void applyCollision(RigidBody* rigidBody1, RigidBody* rigidBody2, sf::Vector3<double> collision_point);
 
         //state variables
         double width;
@@ -58,6 +59,7 @@ class RigidBody {
         unsigned int type;
         double radius;
         bool collision_found = false;
+        bool contact_border = false;
     private:
 
     ////spatial variables
