@@ -70,7 +70,7 @@ sf::Vector2f* Spline::ctrl_point_to_drag = nullptr;
 sf::Sprite* Spline::ctrl_sprite_to_drag = nullptr;
 Spline* Spline::ctrl_spline_to_drag = nullptr;
 
-Spline::Spline(std::vector<sf::Vector2f> ctrl_points, sf::Texture& texture, bool circular)
+Spline::Spline(std::vector<sf::Vector2f> ctrl_points, sf::Texture& texture, bool circular) : SpriteObject(texture, {0, 0})
 {
     assert(ctrl_points.size() >= 4);
 
@@ -83,8 +83,7 @@ Spline::Spline(std::vector<sf::Vector2f> ctrl_points, sf::Texture& texture, bool
         this->ctrl_points_.push_back(this->ctrl_points_[2]);
     }
 
-    this->sprite_ = new SpriteObject(texture, {0, 0});
-    this->sprite_->setScale({0.01f, 0.01f});
+    this->sprite_.setScale({0.01f, 0.01f});
 
     ctrl_texture_.loadFromFile("res/control_point.png");
     for (size_t i = 0; i < this->ctrl_points_.size(); i++)
@@ -140,15 +139,14 @@ void Spline::update(float time_delta)
     }
     
     std::pair<int, float> interpol = searchForU(total_length_ * t);
-    current_pos_ = segments_[interpol.first].getPoint(interpol.second);
+    this->setPosition(segments_[interpol.first].getPoint(interpol.second));
 
     mutex_.unlock();      
 }
 
 void Spline::drawObject(sf::RenderWindow& window)
 {
-    this->sprite_->setPosition(current_pos_);
-    this->sprite_->draw(window);
+    this->draw(window);
 }
 
 void Spline::drawControlPoints(sf::RenderWindow& window)

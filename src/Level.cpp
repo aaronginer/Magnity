@@ -324,6 +324,44 @@ Level* Level::LoadLevel1(sf::RenderWindow& window, tgui::GuiSFML& gui)
     return l;
 }
 
+Level* Level::LoadLevelWindTest(sf::RenderWindow& window, tgui::GuiSFML& gui)
+{
+    View view(sf::FloatRect(0.f, 0.f, (float) WIDTH, (float) HEIGTH));
+
+    // Textures
+    sf::Texture* objectTexture = new sf::Texture();
+    objectTexture->loadFromFile("res/object.png");
+
+    // Splines
+
+    // ParticleDynamics
+    ParticleDynamics* pdyn = new ParticleDynamics(true);
+
+    Particle* p = new Particle(*objectTexture, {0, WIDTH/2}, {0, 0}, std::rand() % 1000);
+    ForceSource* f_g = new ForceSource(ForceType::Constant, {0, 981});
+    ForceSource* f_wind = new ForceSource(ForceType::VectorField, VectorFieldFunction::Wind);
+    p->K_ = 2;
+    p->sprite_->setScale({0.01f, 0.01f});
+    pdyn->addParticle(p);
+    pdyn->addForceSource(f_g);
+    pdyn->addForceSource(f_wind);
+
+    // RigidBodies
+
+    // Magnets
+
+    // Magnetarea
+
+    // create level
+    Level* l = new Level("LevelPDDemo");
+    l->loaded_textures_.push_back(objectTexture);
+
+    l->particle_dynamics_.push_back(pdyn);
+
+    window.setView(view);
+    return l;
+}
+
 Level* Level::LoadLevelParticleDemo(sf::RenderWindow& window, tgui::GuiSFML& gui)
 {
     View view(sf::FloatRect(0.f, 0.f, (float) WIDTH, (float) HEIGTH));
@@ -387,7 +425,9 @@ Level* Level::LoadLevelPathInterpolDemo(sf::RenderWindow& window, tgui::GuiSFML&
     l->loaded_textures_.push_back(objectTexture);
 
     l->splines_.push_back(s);
-    l->splines_.push_back(s2);;
+    l->splines_.push_back(s2);
+
+    l->background_color_ = sf::Color::Black;
 
     window.setView(view);
     return l;

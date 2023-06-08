@@ -51,13 +51,12 @@ sf::Vector2f ForceSource::getForce(sf::Vector2f x /*pos*/, float m /*m*/)
         {
             switch (vf_func)
             {
-                /*case Sin:
-                    return {20*s.m, (float) 100*sin(s.x.x/100)*s.m};
-                case NegSin:
-                    return {-20*s.m, (float) 100*sin(s.x.x/100)*s.m};*/
-                case Defined:
+                case Wind:
                 {
-                    return {0, this->m_ * ((int)(x.x / 100) % 2 == 0 ? -1 : 1)}; // placeholder
+                    sf::Vector2f F_base = {10000, 0};
+                    sf::Vector2f F_position_based = {0, ((int)(x.x / 10000) % 2 == 0 ? -2000 : 2000)};
+                    sf::Vector2f F_rand = {-5000 + std::rand() % 10000, -5000 + std::rand() % 5000};
+                    return F_base + F_position_based + F_rand; // placeholder
                 }   
                 default:
                     return {this->m_, this->m_}; // placeholder

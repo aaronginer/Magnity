@@ -9,9 +9,7 @@
 #define G 0.0000000000667
 
 enum VectorFieldFunction {
-    Sin,
-    NegSin,
-    Defined
+    Wind,
 };
 
 enum ForceType {
@@ -80,8 +78,7 @@ public:
     SpriteObject* sprite_;
     std::deque<sf::Vector2f> position_history_;
 
-    // position, force and mass are part fields of ForceSource
-
+    // position, mass and force are part of the ForceSource class
     // velocity
     sf::Vector2f v_;
     // drag

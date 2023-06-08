@@ -30,7 +30,7 @@ typedef struct
     float arc_length_;
 } ArcLengthTableEntry;
 
-class Spline
+class Spline : public SpriteObject
 {
     public:
         std::vector<sf::Vector2f> ctrl_points_;
@@ -43,7 +43,6 @@ class Spline
 
         sf::Texture ctrl_texture_;
         std::vector<sf::Sprite> ctrl_sprites_;
-        GameObject* sprite_;
 
         std::mutex mutex_;
 
@@ -59,7 +58,7 @@ class Spline
 
         Spline(std::vector<sf::Vector2f> ctrl_points, sf::Texture& texture, bool circular=false);
 
-        ~Spline() { delete sprite_; }
+        ~Spline() { }
 
         void init();
         void initSegments();

@@ -25,6 +25,7 @@ public:
     virtual void setScale(sf::Vector2f scale) { this->scale_ = scale_; }
     virtual void setRotation(float rotation) { this->rotation_ = rotation; }
 
+    virtual void update(float delta_time) {};
     virtual void draw(sf::RenderWindow& window) {};
 };
 
