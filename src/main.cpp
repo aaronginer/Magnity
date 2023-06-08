@@ -25,10 +25,14 @@ extern void getClickedControlPoint(Level* level, sf::Vector2f mouse_position, sf
 extern tgui::Button::Ptr createControlsButton();
 
 tgui::Panel::Ptr createControlPanel(sf::RenderWindow& window);
+tgui::Panel::Ptr createPausePanel(sf::RenderWindow& window, tgui::Gui& gui);
 void updateControlPanelPosition(tgui::Panel::Ptr panel, sf::RenderWindow& window);
+void updatePausePanelSize(tgui::Panel::Ptr panel, sf::RenderWindow& window);
 
 sf::RenderWindow *mainWindow;
 tgui::Panel::Ptr control_panel;
+tgui::Button::Ptr control_button;
+tgui::Panel::Ptr pause_panel;
 
 std::thread animation_loop_thread;
 
@@ -36,7 +40,7 @@ std::thread animation_loop_thread;
 int animation_update_rate = 500;
 int fps = 60;
 
-bool gui_visible = false;
+bool control_panel_visible = false;
 Level* current_level = nullptr;
 bool game_paused = false;
 
@@ -70,7 +74,11 @@ int main()
     tgui::GuiSFML gui(*mainWindow);
 
     control_panel = createControlPanel(*mainWindow);
+    control_button = createControlsButton();
+    pause_panel = createPausePanel(*mainWindow, gui);
     gui.add(control_panel);
+    gui.add(control_button);
+    gui.add(pause_panel);
 
     current_level = Level::LoadLevel0(*mainWindow, gui);
 
@@ -96,7 +104,7 @@ int main()
             {
                 if (event.key.code == Keyboard::Key::Escape)
                 {
-                    game_paused = !game_paused;
+                    if (current_level->name.compare("Level0") != 0) game_paused = !game_paused;
                 }
 
                 current_level->handlePolledKeyInput(event);
@@ -117,6 +125,7 @@ int main()
                     mainWindow->setSize(sf::Vector2u(800, 600));
                 }
                 updateControlPanelPosition(control_panel, *mainWindow);
+                updatePausePanelSize(pause_panel, *mainWindow);
             }
 
             gui.handleEvent(event);
@@ -130,7 +139,9 @@ int main()
         // drawing
         (*mainWindow).clear(current_level == nullptr ? sf::Color::Black : current_level->background_color_);
         current_level->draw(*mainWindow, deltaTime);
-        control_panel->setVisible(gui_visible);
+        control_panel->setVisible(control_panel_visible);
+        pause_panel->setVisible(game_paused);
+        control_button->setVisible(current_level->name.compare("Level0") != 0);
         gui.draw();
 
         (*mainWindow).display();
@@ -309,6 +320,24 @@ tgui::Panel::Ptr createControlPanel(sf::RenderWindow& window)
 
     panel->add(drawParticleFFButton);
 
+    tgui::Label::Ptr rk4CheckboxLabel = tgui::Label::create();
+    rk4CheckboxLabel->setText("Use RK4: ");
+    rk4CheckboxLabel->setPosition(10, 320);
+    rk4CheckboxLabel->setTextSize(16);
+
+    tgui::CheckBox::Ptr rk4Checkbox = tgui::CheckBox::create();
+    rk4Checkbox->setChecked(true);
+    rk4Checkbox->setPosition(80, 320);
+    rk4Checkbox->onCheck([&](){
+        ParticleDynamics::rk4 = true;
+    });
+    rk4Checkbox->onUncheck([&](){
+        ParticleDynamics::rk4 = false;
+    });
+
+    panel->add(rk4CheckboxLabel);
+    panel->add(rk4Checkbox);
+
     // panel sizing
     sf::Vector2f panelSize(0, 0);
     for (const auto& widget : panel->getWidgets())
@@ -322,8 +351,56 @@ tgui::Panel::Ptr createControlPanel(sf::RenderWindow& window)
     return panel;
 }
 
+tgui::Panel::Ptr createPausePanel(sf::RenderWindow& window, tgui::Gui& gui)
+{
+    auto panel = tgui::Panel::create();
+    panel->getRenderer()->setBackgroundColor(sf::Color(50, 50, 50, 128));
+    panel->setSize({window.getSize().x, window.getSize().y});
+
+    auto back_to_menu_button = tgui::Button::create();
+    back_to_menu_button->setText("Menu");
+    back_to_menu_button->setSize(100, 30);
+    back_to_menu_button->setOrigin(0.5f, 0.5f);
+    back_to_menu_button->setPosition({panel->getSize().x/2, panel->getSize().y/2});
+    back_to_menu_button->onClick([&window, &gui, &panel](){
+        Level* c = current_level;
+        c->destroy(window);
+        gui.remove(c->level_panel_);
+        current_level = Level::LoadLevel0(window, gui);
+        game_paused = false;
+    });
+
+    panel->add(back_to_menu_button);
+
+    updatePausePanelSize(panel, window);
+
+    return panel;
+}
+
 void updateControlPanelPosition(tgui::Panel::Ptr panel, sf::RenderWindow& window)
 {
     // Position the panel widget at the top right of the window with a margin of 10 pixels    
     panel->setPosition(window.getSize().x - panel->getSize().x - 10, 10);
+}
+
+void updatePausePanelSize(tgui::Panel::Ptr panel, sf::RenderWindow& window)
+{
+    panel->setSize({window.getSize().x, window.getSize().y});
+}
+
+// creates the control button that toggles the controls gui
+tgui::Button::Ptr createControlsButton()
+{
+     // Create the toggle button
+    auto toggle_button = tgui::Button::create();
+    toggle_button->setText("SaA Controls");
+    toggle_button->setSize(100, 30);
+    toggle_button->setPosition(10, 10);
+
+    // Connect the button to the function that will toggle the GUI
+    toggle_button->onClick.connect([&](){
+        control_panel_visible = !control_panel_visible;
+    });
+
+    return toggle_button;
 }

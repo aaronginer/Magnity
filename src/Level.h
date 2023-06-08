@@ -26,7 +26,9 @@ class Level {
         sf::Color background_color_ = sf::Color::White;
         tgui::Panel::Ptr level_panel_;
 
-        Level();
+        std::string name;
+
+        Level(std::string name);
 
         void destroy(sf::RenderWindow& window);
 
@@ -44,6 +46,8 @@ class Level {
 
         static Level* LoadLevel0(sf::RenderWindow& window, tgui::GuiSFML& gui);
         static Level* LoadLevel1(sf::RenderWindow& window, tgui::GuiSFML& gui);
+        static Level* LoadLevelParticleDemo(sf::RenderWindow& window, tgui::GuiSFML& gui);
+        static Level* LoadLevelPathInterpolDemo(sf::RenderWindow& window, tgui::GuiSFML& gui);
 };
 
 

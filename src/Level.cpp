@@ -1,15 +1,14 @@
 #include "Level.h"
+#include "cstdlib"
 
 #define WIDTH 1200
 #define HEIGTH 800
 
 extern Level* current_level;
-extern bool gui_visible;
 
-tgui::Button::Ptr createControlsButton();
-
-Level::Level()
+Level::Level(std::string name)
 {
+    this->name = name;
 }
 
 void Level::destroy(sf::RenderWindow& window)
@@ -23,7 +22,9 @@ void Level::destroy(sf::RenderWindow& window)
     {
         for (Particle* pa : p->particles)
         {
-            delete pa;
+            // if it isn't also in the force sources vector (which it usually is), delete it
+            if (std::find(p->force_sources.begin(), p->force_sources.end(), pa) == p->force_sources.end()) 
+                delete pa;
         }
         for (ForceSource* f : p->force_sources)
         {
@@ -179,6 +180,63 @@ Level* Level::LoadLevel0(sf::RenderWindow& window, tgui::GuiSFML& gui)
     });
 
     panel->add(start_game_button);
+
+    auto pi_demo_button = tgui::Button::create();
+    pi_demo_button->setText("PI Demo");
+    pi_demo_button->setSize(100, 30);
+    pi_demo_button->setOrigin(0.5f, 0.5f);
+    pi_demo_button->setPosition({panel->getPosition().x-300, panel->getPosition().y+200});
+    pi_demo_button->onClick([&window, &gui, &panel](){
+        Level* c = current_level;
+        c->destroy(window);
+        gui.remove(c->level_panel_);
+        current_level = LoadLevelPathInterpolDemo(window, gui);
+    });
+
+    panel->add(pi_demo_button);
+
+    auto pd_demo_buttom = tgui::Button::create();
+    pd_demo_buttom->setText("PD Demo");
+    pd_demo_buttom->setSize(100, 30);
+    pd_demo_buttom->setOrigin(0.5f, 0.5f);
+    pd_demo_buttom->setPosition({panel->getPosition().x, panel->getPosition().y+200});
+    pd_demo_buttom->onClick([&window, &gui, &panel](){
+        Level* c = current_level;
+        c->destroy(window);
+        gui.remove(c->level_panel_);
+        current_level = LoadLevelParticleDemo(window, gui);
+    });
+
+    panel->add(pd_demo_buttom);
+
+    auto rb_demo_button = tgui::Button::create();
+    rb_demo_button->setText("RB Demo");
+    rb_demo_button->setSize(100, 30);
+    rb_demo_button->setOrigin(0.5f, 0.5f);
+    rb_demo_button->setPosition({panel->getPosition().x+300, panel->getPosition().y+200});
+    rb_demo_button->onClick([&window, &gui, &panel](){
+        // Level* c = current_level;
+        // c->destroy(window);
+        // gui.remove(c->level_panel_);
+        // current_level = LoadLevelParticleDemo(window, gui);
+    });
+
+    panel->add(rb_demo_button);
+
+    auto exit_button = tgui::Button::create();
+    exit_button->setText("Exit Game");
+    exit_button->setSize(100, 30);
+    exit_button->setOrigin(0.5f, 0.5f);
+    exit_button->setPosition({panel->getPosition().x, panel->getPosition().y+300});
+    exit_button->onClick([&window, &gui, &panel](){
+        Level* c = current_level;
+        c->destroy(window);
+        gui.remove(c->level_panel_);
+        window.close();
+    });
+
+    panel->add(exit_button);
+
     gui.add(panel);
 
     // Textures
@@ -189,7 +247,7 @@ Level* Level::LoadLevel0(sf::RenderWindow& window, tgui::GuiSFML& gui)
     SpriteObject* title_sprite = new SpriteObject(*titleTexture, view.getCenter()+sf::Vector2f(0, -50));
 
     // create level
-    Level* l = new Level();
+    Level* l = new Level("Level0");
     l->loaded_textures_.push_back(titleTexture);
     l->game_objects_.push_back(title_sprite);
     
@@ -202,8 +260,90 @@ Level* Level::LoadLevel0(sf::RenderWindow& window, tgui::GuiSFML& gui)
 
 Level* Level::LoadLevel1(sf::RenderWindow& window, tgui::GuiSFML& gui)
 {
-    gui.add(createControlsButton());
+    View view(sf::FloatRect(0.f, 0.f, (float) WIDTH, (float) HEIGTH));
 
+    // Textures
+    sf::Texture* objectTexture = new sf::Texture();
+    objectTexture->loadFromFile("res/object.png");
+
+    // Splines
+
+    // ParticleDynamics
+    ParticleDynamics* pdyn = new ParticleDynamics(true);
+
+    Particle* p = new Particle(*objectTexture, {WIDTH/2, HEIGTH/2}, {0, 0}, 10);
+    p->sprite_->setScale({0.01f, 0.01f});
+    pdyn->addParticle(p);
+    pdyn->addForceSource(p);
+
+    // RigidBodies
+
+    // Magnets
+    MagnetKeySet player1_keyset = { sf::Keyboard::Key::A, sf::Keyboard::Key::D, sf::Keyboard::Key::W, sf::Keyboard::Key::S, sf::Keyboard::Key::E };
+    MagnetKeySet player2_keyset = { sf::Keyboard::Key::Left, sf::Keyboard::Key::Right, sf::Keyboard::Key::Up, sf::Keyboard::Key::Down, sf::Keyboard::Key::Enter };
+
+    Magnet* m1 = new Magnet(player1_keyset, {40, 30}, 0);
+    m1->setFollowObject(p->sprite_);
+    Magnet* m2 = new Magnet(player2_keyset, {40, 500}, 1);
+    m2->setFollowObject(p->sprite_);
+
+
+    // create level
+    Level* l = new Level("Level1");
+    l->loaded_textures_.push_back(objectTexture);
+    l->particle_dynamics_.push_back(pdyn);
+    l->magnets_.push_back(m1);
+    l->magnets_.push_back(m2);
+
+    window.setView(view);
+    return l;
+}
+
+Level* Level::LoadLevelParticleDemo(sf::RenderWindow& window, tgui::GuiSFML& gui)
+{
+    View view(sf::FloatRect(0.f, 0.f, (float) WIDTH, (float) HEIGTH));
+
+    // Textures
+    sf::Texture* objectTexture = new sf::Texture();
+    objectTexture->loadFromFile("res/object.png");
+
+    // Splines
+
+    // ParticleDynamics
+    ParticleDynamics* pdyn = new ParticleDynamics(true);
+
+    for (int i = 0; i < 20; i++)
+    {
+        Particle* p = new Particle(*objectTexture, {std::rand() % WIDTH, std::rand() % HEIGTH}, {0, 0}, std::rand() % 50000);
+        p->sprite_->setScale({0.01f, 0.01f});
+        pdyn->addParticle(p);
+        pdyn->addForceSource(p);
+    }
+
+    // RigidBodies
+
+    // Magnets
+    // MagnetKeySet player1_keyset = { sf::Keyboard::Key::A, sf::Keyboard::Key::D, sf::Keyboard::Key::W, sf::Keyboard::Key::S, sf::Keyboard::Key::E };
+    // MagnetKeySet player2_keyset = { sf::Keyboard::Key::Left, sf::Keyboard::Key::Right, sf::Keyboard::Key::Up, sf::Keyboard::Key::Down, sf::Keyboard::Key::Enter };
+
+    // Magnet* m1 = new Magnet(player1_keyset, {40, 30}, 0);
+    // m1->setFollowObject(p_->sprite_);
+    // Magnet* m2 = new Magnet(player2_keyset, {40, 500}, 1);
+    // m2->setFollowObject(p_->sprite_);
+
+
+    // create level
+    Level* l = new Level("LevelPDDemo");
+    l->loaded_textures_.push_back(objectTexture);
+
+    l->particle_dynamics_.push_back(pdyn);
+
+    window.setView(view);
+    return l;
+}
+
+Level* Level::LoadLevelPathInterpolDemo(sf::RenderWindow& window, tgui::GuiSFML& gui)
+{
     View view(sf::FloatRect(0.f, 0.f, (float) WIDTH, (float) HEIGTH));
 
     // Textures
@@ -213,64 +353,21 @@ Level* Level::LoadLevel1(sf::RenderWindow& window, tgui::GuiSFML& gui)
     // Splines
 
     Spline* s = new Spline({{200, 200}, {200, HEIGTH-200}, {WIDTH-200, HEIGTH-200}, {WIDTH-200, 200}}, *objectTexture, true);
-    Spline* s2 = new Spline({{400, 400}, {400, HEIGTH-400}, {WIDTH-400, HEIGTH-400}, {WIDTH-400, 400}}, *objectTexture, true);
+    Spline* s2 = new Spline({{400, 400}, {400, HEIGTH-400}, {WIDTH-400, HEIGTH-400}, {WIDTH-400, 400}}, *objectTexture, false);
     
     // ParticleDynamics
-    ParticleDynamics* pdyn = new ParticleDynamics(true);
-
-    Particle* p1 = new Particle(*objectTexture, view.getCenter()-sf::Vector2f(view.getCenter().x/2, 0), {0, 0}, 10);
-    p1->sprite_->setScale({0.01f, 0.01f});
-    ForceSource* f = new ForceSource(ForceType::AntiGravity, view.getCenter(), 50000);
-    ForceSource* f1 = new ForceSource(ForceType::Gravity, view.getCenter(), 50000);
-    ForceSource* f_c = new ForceSource(ForceType::Constant, sf::Vector2f(200, 0));
-
-    pdyn->addParticle(p1);
-    pdyn->addForceSource(f);   
-    pdyn->addForceSource(f1);  
-    // pdyn->addForceSource(f_c);  
-
 
     // RigidBodies
 
     // Magnets
-    MagnetKeySet player1_keyset = { sf::Keyboard::Key::A, sf::Keyboard::Key::D, sf::Keyboard::Key::W, sf::Keyboard::Key::S, sf::Keyboard::Key::E };
-    MagnetKeySet player2_keyset = { sf::Keyboard::Key::Left, sf::Keyboard::Key::Right, sf::Keyboard::Key::Up, sf::Keyboard::Key::Down, sf::Keyboard::Key::Enter };
-
-    Magnet* m1 = new Magnet(player1_keyset, {40, 30}, 0);
-    m1->setFollowObject(p1->sprite_);
-    Magnet* m2 = new Magnet(player2_keyset, {40, 500}, 1);
-    m2->setFollowObject(p1->sprite_);
-
 
     // create level
-    Level* l = new Level();
+    Level* l = new Level("LevelPIDemo");
     l->loaded_textures_.push_back(objectTexture);
 
     l->splines_.push_back(s);
-    l->splines_.push_back(s2);
-    l->particle_dynamics_.push_back(pdyn);
-    l->magnets_.push_back(m1);
-    l->magnets_.push_back(m2);
-    
-    l->mouse_force = f;
+    l->splines_.push_back(s2);;
 
     window.setView(view);
     return l;
-}
-
-// creates the control button that toggles the controls gui
-tgui::Button::Ptr createControlsButton()
-{
-     // Create the toggle button
-    auto toggle_button = tgui::Button::create();
-    toggle_button->setText("SaA Controls");
-    toggle_button->setSize(100, 30);
-    toggle_button->setPosition(10, 10);
-
-    // Connect the button to the function that will toggle the GUI
-    toggle_button->onClick.connect([&](){
-        gui_visible = !gui_visible;
-    });
-
-    return toggle_button;
 }

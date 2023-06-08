@@ -8,27 +8,10 @@
 
 #define G 0.0000000000667
 
-class ParticleState {
-public:
-    // position
-    sf::Vector2f x;
-    // velocity
-    sf::Vector2f v;
-    // force
-    sf::Vector2f F;
-    // mass
-    float m;
-};
-
-class Particle {
-public:
-    std::deque<sf::Vector2f> position_history_;
-
-    SpriteObject* sprite_;
-    ParticleState state;
-
-    Particle(sf::Texture& texture, sf::Vector2f x, sf::Vector2f v, float m);
-    ~Particle() { delete sprite_; }
+enum VectorFieldFunction {
+    Sin,
+    NegSin,
+    Defined
 };
 
 enum ForceType {
@@ -36,12 +19,6 @@ enum ForceType {
     VectorField,
     AntiGravity,
     Constant
-};
-
-enum VectorFieldFunction {
-    Sin,
-    NegSin,
-    Defined
 };
 
 class ForceSource {
@@ -87,9 +64,39 @@ public:
         this->type = type;
     }
 
-
-    sf::Vector2f getForce(ParticleState& s);
+    virtual sf::Vector2f getPosition() { return x; }
+    virtual void setPosition(sf::Vector2f new_pos) { x = new_pos; }
+    sf::Vector2f getForce(sf::Vector2f x, float m);
     void draw(sf::RenderWindow& window);
+};
+
+class ParticleState {
+public:
+    // position
+    sf::Vector2f x;
+    // velocity
+    sf::Vector2f v;
+    // force
+    sf::Vector2f F;
+    // mass
+    float m;
+};
+
+class Particle : public ForceSource {
+public:
+    SpriteObject* sprite_;
+    std::deque<sf::Vector2f> position_history_;
+    ParticleState state;
+
+    Particle(sf::Texture& texture, sf::Vector2f x, sf::Vector2f v, float m);
+    ~Particle() { delete sprite_; }
+
+    sf::Vector2f getPosition() override { return state.x; }
+    void setPosition(sf::Vector2f pos) override { 
+        state.x = pos; 
+        x = pos;
+        sprite_->setPosition(pos);
+    }
 };
 
 class ParticleDynamics {
@@ -97,18 +104,18 @@ public:
     static bool draw_trails;
     static bool draw_ff;
     static int trail_seconds;
+    static bool rk4;
 
     float time_since_last_recording_ = 0.0f;
-    bool rk4 = false;
 
     ParticleDynamics(bool rk4) { this->rk4 = rk4; }
 
     std::vector<Particle*> particles;
     std::vector<ForceSource*> force_sources;
-    void updateForce(ParticleState& s);
+    sf::Vector2f getForce(Particle* self, sf::Vector2f x, float m);
 
-    void RK4(ParticleState& s, float deltaT);
-    void Euler(ParticleState& s, float deltaT);
+    void RK4(float deltaT);
+    void Euler(float deltaT);
 
     void addParticle(Particle* p) { particles.push_back(p); }
     void addForceSource(ForceSource* f) { force_sources.push_back(f); }

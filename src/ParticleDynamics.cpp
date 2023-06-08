@@ -3,7 +3,7 @@
 #include "algorithm"
 
 #define M_PI 3.14159265358979323846
-#define PIXELS_PER_UNIT 10000
+#define PIXELS_PER_UNIT 100000
 
 // static float distance(sf::Vector2f v1, sf::Vector2f v2)
 // {
@@ -15,7 +15,7 @@ static float vlength(sf::Vector2f v)
     return sqrt(pow(v.x, 2) + pow(v.y, 2));
 }
 
-Particle::Particle(sf::Texture& texture, sf::Vector2f x, sf::Vector2f v, float m)
+Particle::Particle(sf::Texture& texture, sf::Vector2f x, sf::Vector2f v, float m) : ForceSource(ForceType::Gravity, x, m)
 {
     this->state.x = x;
     this->state.v = v;
@@ -23,7 +23,7 @@ Particle::Particle(sf::Texture& texture, sf::Vector2f x, sf::Vector2f v, float m
     this->sprite_ = new SpriteObject(texture, x);
 }
 
-sf::Vector2f ForceSource::getForce(ParticleState& s)
+sf::Vector2f ForceSource::getForce(sf::Vector2f x /*pos*/, float m /*m*/)
 {
     // gravitational softening length
     #define EPSILON (1.0f/100)
@@ -37,15 +37,15 @@ sf::Vector2f ForceSource::getForce(ParticleState& s)
         }
         case ForceType::Gravity:
         {
-            sf::Vector2f r = x - s.x;
+            sf::Vector2f r = this->x - x;
             float d = vlength(r) / PIXELS_PER_UNIT;
-            r /= d; // normalize
+            if (d > 0.0001f) r /= d; // normalize
 
             // force magnitude at distance d
-            float g = G * (m / (pow(d, 2) + pow(EPSILON, 2)));
+            float g = G * (this->m / (pow(d, 2) + pow(EPSILON, 2)));
             // g = 9.81f;
 
-            return (r * g * s.m) * multiplier;
+            return (r * g * m) * multiplier;
         }
         case ForceType::VectorField:
         {
@@ -57,10 +57,10 @@ sf::Vector2f ForceSource::getForce(ParticleState& s)
                     return {-20*s.m, (float) 100*sin(s.x.x/100)*s.m};*/
                 case Defined:
                 {
-                    return {0, m * ((int)(s.x.x / 100) % 2 == 0 ? -1 : 1)};
+                    return {0, this->m * ((int)(x.x / 100) % 2 == 0 ? -1 : 1)}; // placeholder
                 }   
                 default:
-                    return {m, m};
+                    return {this->m, this->m}; // placeholder
             }
         }
         case ForceType::Constant:
@@ -80,7 +80,7 @@ void ForceSource::draw(sf::RenderWindow& window)
 
     sf::CircleShape c;
     c.setPosition(x);
-    c.setFillColor(sf::Color::Red);
+    c.setFillColor(sf::Color(255*m/50000.f, 0, 0));
     c.setOrigin({10,10});
     c.setRadius(10);
     window.draw(c);
@@ -89,72 +89,122 @@ void ForceSource::draw(sf::RenderWindow& window)
 bool ParticleDynamics::draw_trails = false;
 bool ParticleDynamics::draw_ff = false;
 int ParticleDynamics::trail_seconds = 2;
+bool ParticleDynamics::rk4 = true;
 
-void ParticleDynamics::updateForce(ParticleState& s)
+sf::Vector2f ParticleDynamics::getForce(Particle* self, sf::Vector2f x /*pos*/, float m /*mass*/)
 {
     sf::Vector2f F = {0, 0};
-    for (ForceSource* f : force_sources)
+    for (ForceSource* source : force_sources)
     {
-        F += f->getForce(s);
+        if (source == self) continue; // particle doesnt exert force on itself
+        F += source->getForce(x, m);
     }
 
-    s.F = F;
+    return F;
 }
 
-void ParticleDynamics::RK4(ParticleState& s, float deltaT)
+struct RKState {
+    sf::Vector2f x;
+    sf::Vector2f v;
+    sf::Vector2f F;
+    sf::Vector2f a;
+};
+
+void ParticleDynamics::RK4(float deltaT)
 {
-    ParticleState state1 = s, state2 = s, state3 = s, state4 = s;
-    sf::Vector2f a1, a2, a3, a4;
+    RKState k1[particles.size()];
+    RKState k2[particles.size()];
+    RKState k3[particles.size()];
+    RKState k4[particles.size()];
 
-    updateForce(state1);
-    a1 = state1.F / s.m;
-    
-    state2.x = state1.x + (state1.v * deltaT * 0.5f);
-    state2.v = state1.v + (a1 * deltaT * 0.5f);
-    updateForce(state2);
-    a2 = state2.F / s.m;
-
-    state3.x = state1.x + (state2.v * deltaT * 0.5f);
-    state3.v = state1.v + (a2 * deltaT * 0.5f);
-    updateForce(state3);
-    a3 = state3.F / s.m;
-    
-    state4.x = state1.x + (state3.v * deltaT);
-    state4.v = state1.v + (a3 * deltaT);
-    updateForce(state4);
-    a4 = state4.F / s.m;
-
-    s.x = s.x + (deltaT/6) * (state1.v + state2.v*2.f + state3.v*2.f + state4.v);
-    s.v = s.v + (deltaT/6) * (a1 + a2*2.f + a3*2.f + a4);
-    updateForce(s);
-}
-
-void ParticleDynamics::Euler(ParticleState& s, float deltaT)
-{
-    updateForce(s);
-    sf::Vector2f a = s.F / s.m;
-    s.x = s.x + s.v * deltaT;
-    s.v = s.v + a * deltaT;
-}
-
-void ParticleDynamics::particleUpdate(ParticleState& s, float deltaT)
-{
-    if (rk4)
+    // K1
+    // set position and velocity
+    for (size_t i = 0; i < particles.size(); i++)
     {
-        ParticleDynamics::RK4(s, deltaT);
+        Particle* p = particles[i];
+        k1[i].x = p->state.x;
+        k1[i].v = p->state.v;
     }
-    else
+    // calculate forces and update acceleration
+    for (size_t i = 0; i < particles.size(); i++)
     {
-        ParticleDynamics::Euler(s, deltaT);
+        Particle* p = particles[i];
+        k1[i].F = getForce(p, k1[i].x, p->state.m);
+        k1[i].a = k1[i].F / p->state.m;
+    }
+
+    // K2
+    for (size_t i = 0; i < particles.size(); i++)
+    {
+        k2[i].x = k1[i].x + (deltaT * k1[i].v * 0.5f);
+        k2[i].v = k1[i].v + (deltaT * k1[i].a * 0.5f);
+    }
+    for (size_t i = 0; i < particles.size(); i++)
+    {
+        Particle* p = particles[i];
+        k2[i].F = getForce(p, k2[i].x, p->state.m);
+        k2[i].a = k2[i].F / p->state.m;
+    }
+
+    // K3
+    for (size_t i = 0; i < particles.size(); i++)
+    {
+        k3[i].x = k2[i].x + (deltaT * k2[i].v * 0.5f);
+        k3[i].v = k2[i].v + (deltaT * k2[i].a * 0.5f);
+    }
+    for (size_t i = 0; i < particles.size(); i++)
+    {
+        Particle* p = particles[i];
+        k3[i].F = getForce(p, k2[i].x, p->state.m);
+        k3[i].a = k3[i].F / p->state.m;
+    }
+
+    // K4
+    for (size_t i = 0; i < particles.size(); i++)
+    {
+        k4[i].x = k3[i].x + (deltaT * k3[i].v * 0.5f);
+        k4[i].v = k3[i].v + (deltaT * k3[i].a * 0.5f);
+    }
+    for (size_t i = 0; i < particles.size(); i++)
+    {
+        Particle* p = particles[i];
+        k4[i].F = getForce(p, k4[i].x, p->state.m);
+        k4[i].a = k4[i].F / p->state.m;
+    }
+
+    // update values
+    for (size_t i = 0; i < particles.size(); i++)
+    {
+        Particle* p = particles[i];
+        sf::Vector2f x = p->state.x + (deltaT/6) * (k1[i].v + k2[i].v*2.f + k3[i].v*2.f + k4[i].v);
+        sf::Vector2f v = p->state.v + (deltaT/6) * (k1[i].a + k2[i].a*2.f + k3[i].a*2.f + k4[i].a);
+
+        p->setPosition(x);
+        p->state.v = v;
+    }
+}
+
+void ParticleDynamics::Euler(float deltaT)
+{
+    for (size_t i = 0; i < particles.size(); i++)
+    {
+        Particle* p = particles[i];
+        sf::Vector2f F = getForce(p, p->state.x, p->state.m);
+        sf::Vector2f a = F / p->state.m;
+        p->setPosition(p->state.x + deltaT * p->state.v);
+        p->state.v = p->state.v + deltaT * a; 
     }
 }
 
 void ParticleDynamics::update(float deltaT)
 {
-    for (Particle* p : particles)
+    if (ParticleDynamics::rk4)
     {
-        particleUpdate(p->state, deltaT);
-        p->sprite_->setPosition(p->state.x);
+        RK4(deltaT);
+    }
+    else
+    {
+        Euler(deltaT);
     }
 }
 
@@ -165,16 +215,21 @@ void ParticleDynamics::draw(sf::RenderWindow& window, float delta_time)
         f->draw(window);
     }
 
-    for (Particle* p : particles)
-    {
-        time_since_last_recording_ += delta_time;
-        if (time_since_last_recording_ >= trail_seconds / 20.f)
+    // update trail
+    time_since_last_recording_ += delta_time;
+    if (time_since_last_recording_ >= trail_seconds / 20.f)
+    {  
+        for (Particle* p : particles)
         {
             if (p->position_history_.size() == 20) p->position_history_.pop_front();
             p->position_history_.push_back(p->sprite_->getPosition());
             time_since_last_recording_ = 0.f;
         }
+    }
+    
 
+    for (Particle* p : particles)
+    {
         p->sprite_->draw(window);
     }
 }
@@ -231,8 +286,8 @@ void ParticleDynamics::drawForceField(sf::RenderWindow& window, float object_mas
         {
             sf::Vector2f pos = {x*DBS + DBS/2, y*DBS + DBS/2};
             s.x = {(float) pos.x, (float) pos.y};
-            updateForce(s);
-            drawArrow(window, arrow_tex, pos, s.F);
+            sf::Vector2f F = getForce(nullptr, s.x, s.m);
+            drawArrow(window, arrow_tex, pos, F);
         }
     }
 }
