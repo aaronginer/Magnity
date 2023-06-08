@@ -23,11 +23,11 @@ enum ForceType {
 
 class ForceSource {
 public:
-    ForceType type;
+    ForceType type_;
     // position
-    sf::Vector2f x;
+    sf::Vector2f x_;
     // mass
-    float m;
+    float m_;
     // constant force
     sf::Vector2f F_ = {0, 0};
 
@@ -35,66 +35,64 @@ public:
 
     ForceSource(ForceType type, sf::Vector2f x, float m)
     {
-        this->type = type;
-        this->x = x;
-        this->m = m;
+        this->type_ = type;
+        this->x_ = x;
+        this->m_ = m;
     }
 
     ForceSource(ForceType type, sf::Vector2f F)
     {
-        this->type = type;
+        this->type_ = type;
         this->F_ = F;
     }
 
     ForceSource(ForceType type, VectorFieldFunction vf_func)
     {
-        this->type = type;
+        this->type_ = type;
         this->vf_func = vf_func;
     }
 
     ForceSource(ForceType type, VectorFieldFunction vf_func, float strength)
     {
-        this->type = type;
+        this->type_ = type;
         this->vf_func = vf_func;
-        this->m = strength;
+        this->m_ = strength;
     }
 
     ForceSource(ForceType type)
     {
-        this->type = type;
+        this->type_ = type;
     }
 
-    virtual sf::Vector2f getPosition() { return x; }
-    virtual void setPosition(sf::Vector2f new_pos) { x = new_pos; }
+    virtual sf::Vector2f getPosition() { return x_; }
+    virtual void setPosition(sf::Vector2f new_pos) { x_ = new_pos; }
     sf::Vector2f getForce(sf::Vector2f x, float m);
     void draw(sf::RenderWindow& window);
 };
 
 class ParticleState {
 public:
-    // position
-    sf::Vector2f x;
-    // velocity
-    sf::Vector2f v;
-    // force
-    sf::Vector2f F;
-    // mass
-    float m;
+    
 };
 
 class Particle : public ForceSource {
 public:
     SpriteObject* sprite_;
     std::deque<sf::Vector2f> position_history_;
-    ParticleState state;
+
+    // position, force and mass are part fields of ForceSource
+
+    // velocity
+    sf::Vector2f v_;
+    // drag
+    float K_ = 0.47;
 
     Particle(sf::Texture& texture, sf::Vector2f x, sf::Vector2f v, float m);
     ~Particle() { delete sprite_; }
 
-    sf::Vector2f getPosition() override { return state.x; }
+    sf::Vector2f getPosition() override { return x_; }
     void setPosition(sf::Vector2f pos) override { 
-        state.x = pos; 
-        x = pos;
+        x_ = pos;
         sprite_->setPosition(pos);
     }
 };

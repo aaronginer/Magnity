@@ -84,7 +84,7 @@ void Level::update(float time_delta)
 void Level::updateMouseParticlePosition(sf::Vector2f new_pos)
 {
     if (mouse_force == nullptr) return;
-    mouse_force->x = new_pos;
+    mouse_force->x_ = new_pos;
 }
 
 void Level::draw(sf::RenderWindow& window, float delta_time)
@@ -339,7 +339,7 @@ Level* Level::LoadLevelParticleDemo(sf::RenderWindow& window, tgui::GuiSFML& gui
 
     for (int i = 0; i < 20; i++)
     {
-        Particle* p = new Particle(*objectTexture, {std::rand() % WIDTH, std::rand() % HEIGTH}, {0, 0}, std::rand() % 50000);
+        Particle* p = new Particle(*objectTexture, {std::rand() % WIDTH, std::rand() % HEIGTH}, {0, 0}, std::rand() % 1000);
         p->sprite_->setScale({0.01f, 0.01f});
         pdyn->addParticle(p);
         pdyn->addForceSource(p);
@@ -348,14 +348,8 @@ Level* Level::LoadLevelParticleDemo(sf::RenderWindow& window, tgui::GuiSFML& gui
     // RigidBodies
 
     // Magnets
-    // MagnetKeySet player1_keyset = { sf::Keyboard::Key::A, sf::Keyboard::Key::D, sf::Keyboard::Key::W, sf::Keyboard::Key::S, sf::Keyboard::Key::E };
-    // MagnetKeySet player2_keyset = { sf::Keyboard::Key::Left, sf::Keyboard::Key::Right, sf::Keyboard::Key::Up, sf::Keyboard::Key::Down, sf::Keyboard::Key::Enter };
 
-    // Magnet* m1 = new Magnet(player1_keyset, {40, 30}, 0);
-    // m1->setFollowObject(p_->sprite_);
-    // Magnet* m2 = new Magnet(player2_keyset, {40, 500}, 1);
-    // m2->setFollowObject(p_->sprite_);
-
+    // Magnetarea
 
     // create level
     Level* l = new Level("LevelPDDemo");
@@ -385,6 +379,8 @@ Level* Level::LoadLevelPathInterpolDemo(sf::RenderWindow& window, tgui::GuiSFML&
     // RigidBodies
 
     // Magnets
+
+    // Magnetarea
 
     // create level
     Level* l = new Level("LevelPIDemo");

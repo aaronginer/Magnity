@@ -43,7 +43,7 @@ class Spline
 
         sf::Texture ctrl_texture_;
         std::vector<sf::Sprite> ctrl_sprites_;
-        SpriteObject* sprite_;
+        GameObject* sprite_;
 
         std::mutex mutex_;
 

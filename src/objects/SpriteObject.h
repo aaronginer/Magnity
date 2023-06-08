@@ -11,12 +11,13 @@ public:
 
     virtual ~SpriteObject() {}
 
-    void setScale(sf::Vector2f scale);
-    void setRotation(float rotation);
-    void setPosition(sf::Vector2f scale);
-
-    virtual void move(sf::Vector2f mov);
+    void setScale(sf::Vector2f scale) override;
+    void setRotation(float rotation) override;
+    void setPosition(sf::Vector2f position) override;
+    void move(sf::Vector2f mov);
     
+    bool contains(sf::Vector2f pos);
+
     sf::Sprite& getSprite() { return this->sprite_; }
     void draw(sf::RenderWindow& window) override;
 };

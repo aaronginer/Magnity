@@ -5,15 +5,16 @@ SpriteObject::SpriteObject(sf::Texture& texture, sf::Vector2f position, float ro
     this->sprite_.setTexture(texture); 
     this->sprite_.setPosition(this->position_);
 
-    sf::FloatRect bounds = this->sprite_.getLocalBounds();
+    sf::FloatRect bounds = this->sprite_.getGlobalBounds();
     this->sprite_.setOrigin({bounds.width/2, bounds.height/2});
 }
 
 void SpriteObject::setScale(sf::Vector2f scale)
 {
+    this->scale_ = scale;
     this->sprite_.setScale(scale);
  
-    sf::FloatRect bounds = this->sprite_.getLocalBounds();
+    sf::FloatRect bounds = this->sprite_.getGlobalBounds();
     this->sprite_.setOrigin({bounds.width/2, bounds.height/2});
 }
 
@@ -33,6 +34,12 @@ void SpriteObject::move(sf::Vector2f mov)
 {
     this->sprite_.move(mov);
     this->position_ = this->sprite_.getPosition();
+}
+
+bool SpriteObject::contains(sf::Vector2f pos)
+{
+    sf::FloatRect bounds = this->sprite_.getGlobalBounds();
+    return bounds.contains(pos);
 }
 
 void SpriteObject::draw(sf::RenderWindow& window)
