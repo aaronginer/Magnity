@@ -12,7 +12,7 @@ SpriteObject::SpriteObject(sf::Texture& texture, sf::Vector2f position, float ro
 void SpriteObject::setScale(sf::Vector2f scale)
 {
     this->sprite_.setScale(scale);
-
+ 
     sf::FloatRect bounds = this->sprite_.getLocalBounds();
     this->sprite_.setOrigin({bounds.width/2, bounds.height/2});
 }

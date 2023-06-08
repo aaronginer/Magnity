@@ -48,6 +48,8 @@ void Level::destroy(sf::RenderWindow& window)
         delete m;
     }
 
+    delete magnet_area_;
+
     for (GameObject* g : this->game_objects_)
     {
         delete g;
@@ -117,6 +119,11 @@ void Level::draw(sf::RenderWindow& window, float delta_time)
     {
         m->draw(window);
     }
+
+    if (magnet_area_ != nullptr)
+    {
+        magnet_area_->draw(window);
+    }
 }
 
 void Level::handlePolledKeyInput(sf::Event keyEvent)
@@ -131,7 +138,7 @@ void Level::handleInstantKeyInput(float delta_time)
 {
     for (Magnet* m : this->magnets_)
     {
-        m->handleInstantKeyInput(delta_time);
+        m->handleInstantKeyInput(delta_time, this->magnet_area_);
     }
 }
 
@@ -185,7 +192,7 @@ Level* Level::LoadLevel0(sf::RenderWindow& window, tgui::GuiSFML& gui)
     pi_demo_button->setText("PI Demo");
     pi_demo_button->setSize(100, 30);
     pi_demo_button->setOrigin(0.5f, 0.5f);
-    pi_demo_button->setPosition({panel->getPosition().x-300, panel->getPosition().y+200});
+    pi_demo_button->setPosition({panel->getPosition().x-300, panel->getPosition().y+150});
     pi_demo_button->onClick([&window, &gui, &panel](){
         Level* c = current_level;
         c->destroy(window);
@@ -199,7 +206,7 @@ Level* Level::LoadLevel0(sf::RenderWindow& window, tgui::GuiSFML& gui)
     pd_demo_buttom->setText("PD Demo");
     pd_demo_buttom->setSize(100, 30);
     pd_demo_buttom->setOrigin(0.5f, 0.5f);
-    pd_demo_buttom->setPosition({panel->getPosition().x, panel->getPosition().y+200});
+    pd_demo_buttom->setPosition({panel->getPosition().x, panel->getPosition().y+150});
     pd_demo_buttom->onClick([&window, &gui, &panel](){
         Level* c = current_level;
         c->destroy(window);
@@ -213,7 +220,7 @@ Level* Level::LoadLevel0(sf::RenderWindow& window, tgui::GuiSFML& gui)
     rb_demo_button->setText("RB Demo");
     rb_demo_button->setSize(100, 30);
     rb_demo_button->setOrigin(0.5f, 0.5f);
-    rb_demo_button->setPosition({panel->getPosition().x+300, panel->getPosition().y+200});
+    rb_demo_button->setPosition({panel->getPosition().x+300, panel->getPosition().y+150});
     rb_demo_button->onClick([&window, &gui, &panel](){
         // Level* c = current_level;
         // c->destroy(window);
@@ -227,7 +234,7 @@ Level* Level::LoadLevel0(sf::RenderWindow& window, tgui::GuiSFML& gui)
     exit_button->setText("Exit Game");
     exit_button->setSize(100, 30);
     exit_button->setOrigin(0.5f, 0.5f);
-    exit_button->setPosition({panel->getPosition().x, panel->getPosition().y+300});
+    exit_button->setPosition({panel->getPosition().x, panel->getPosition().y+200});
     exit_button->onClick([&window, &gui, &panel](){
         Level* c = current_level;
         c->destroy(window);
@@ -272,9 +279,19 @@ Level* Level::LoadLevel1(sf::RenderWindow& window, tgui::GuiSFML& gui)
     ParticleDynamics* pdyn = new ParticleDynamics(true);
 
     Particle* p = new Particle(*objectTexture, {WIDTH/2, HEIGTH/2}, {0, 0}, 10);
+    ForceSource* f_mouse = new ForceSource(ForceType::AntiGravity, {0, 0}, 10);
+
+    ForceSource* f_m1 = new ForceSource(ForceType::Gravity, {0, 0}, 0);
+    ForceSource* f_m2 = new ForceSource(ForceType::Gravity, {0, 0}, 0);
+    ForceSource* f_g = new ForceSource(ForceType::Constant, {0, 981});
+
     p->sprite_->setScale({0.01f, 0.01f});
     pdyn->addParticle(p);
     pdyn->addForceSource(p);
+    pdyn->addForceSource(f_mouse);
+    pdyn->addForceSource(f_m1);
+    pdyn->addForceSource(f_m2);
+    pdyn->addForceSource(f_g);
 
     // RigidBodies
 
@@ -282,11 +299,16 @@ Level* Level::LoadLevel1(sf::RenderWindow& window, tgui::GuiSFML& gui)
     MagnetKeySet player1_keyset = { sf::Keyboard::Key::A, sf::Keyboard::Key::D, sf::Keyboard::Key::W, sf::Keyboard::Key::S, sf::Keyboard::Key::E };
     MagnetKeySet player2_keyset = { sf::Keyboard::Key::Left, sf::Keyboard::Key::Right, sf::Keyboard::Key::Up, sf::Keyboard::Key::Down, sf::Keyboard::Key::Enter };
 
-    Magnet* m1 = new Magnet(player1_keyset, {40, 30}, 0);
-    m1->setFollowObject(p->sprite_);
-    Magnet* m2 = new Magnet(player2_keyset, {40, 500}, 1);
-    m2->setFollowObject(p->sprite_);
+    // Magnetarea
+    MagnetArea* ma = new MagnetArea();
+    ma->loadArea("res/area_definitions/ma_l1.txt");
 
+    Magnet* m1 = new Magnet(player1_keyset, ma->getSpawnPoint(), 0);
+    m1->setFollowObject(p->sprite_);
+    m1->setForceSource(f_m1);
+    Magnet* m2 = new Magnet(player2_keyset, ma->getSpawnPoint(), 1);
+    m2->setFollowObject(p->sprite_);
+    m2->setForceSource(f_m2);
 
     // create level
     Level* l = new Level("Level1");
@@ -294,6 +316,9 @@ Level* Level::LoadLevel1(sf::RenderWindow& window, tgui::GuiSFML& gui)
     l->particle_dynamics_.push_back(pdyn);
     l->magnets_.push_back(m1);
     l->magnets_.push_back(m2);
+    l->magnet_area_ = ma;
+
+    l->mouse_force = f_mouse;
 
     window.setView(view);
     return l;

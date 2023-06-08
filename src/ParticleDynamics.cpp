@@ -264,7 +264,7 @@ void ParticleDynamics::drawTrail(sf::RenderWindow& window)
 }
 
 #define UNIT 100.f
-#define SAMPLES_PER_UNIT 3
+#define SAMPLES_PER_UNIT 4
 #define DBS (UNIT/SAMPLES_PER_UNIT) // distance between sample
 
 void ParticleDynamics::drawForceField(sf::RenderWindow& window, float object_mass)

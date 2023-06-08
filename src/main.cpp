@@ -120,10 +120,11 @@ int main()
             }
             else if (event.type == sf::Event::Resized)
             {
-                if (event.size.width < 800 || event.size.height < 600)
-                {
-                    mainWindow->setSize(sf::Vector2u(800, 600));
-                }
+                // if (event.size.width < 800 || event.size.height < 600)
+                // {
+                //     mainWindow->setSize(sf::Vector2u(WIDTH, HEIGTH));
+                // }
+                mainWindow->setSize(sf::Vector2u(WIDTH, HEIGTH));
                 updateControlPanelPosition(control_panel, *mainWindow);
                 updatePausePanelSize(pause_panel, *mainWindow);
             }
