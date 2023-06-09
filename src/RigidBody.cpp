@@ -37,9 +37,7 @@ RigidBody::RigidBody(double mass, double density, unsigned int type, double widt
     this->angular_acceleration = 0.0;
     this->w = 0.0f;
     this->collision_found = false;
-    VoronoiFracture *fracture = new VoronoiFracture(this, this->x);
-    Vfractures.push_back(fracture);
-
+    Vfractures.push_back(new VoronoiFracture(this, this->x));
 }
 
 void RigidBody::setScale(sf::Vector2f scale)
@@ -166,6 +164,7 @@ void RigidBody::ode(std::vector<RigidBody*> *y0, std::vector<RigidBody> *yEnd, d
             yEnd->at(i).collision_found = false;
         }
 
+        applyVelocityVerletIntegration(y0->at(i), &yEnd->at(i), timestep);
         //Update y0
 
         //2. update angular momentum, angular acceleration, angular velocity
@@ -286,7 +285,7 @@ void RigidBody::checkForCollisions(std::vector<RigidBody*> *rigid_bodies, std::v
                                                       (rigid_bodies->at(i)->radius + rigid_bodies->at(j)->radius);
 
                 applyCollision(rigid_bodies->at(i), rigid_bodies->at(j), collision_point);
-                // Vfractures.at(0)->calculateVoronoiFracture(insertedBodies);
+                // Vfractures[this->id]->calculateVoronoiFracture(insertedBodies);
             }
         }
     }

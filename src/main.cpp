@@ -43,7 +43,7 @@ tgui::Panel::Ptr lost_panel;
 std::thread animation_loop_thread;
 
 // Global variables
-int animation_update_rate = 500;
+int animation_update_rate = 100;
 int fps = 60;
 
 float total_time = 0.0f;
@@ -95,9 +95,6 @@ void animation_loop()
 
         //loop through bodies and delete or insert bodies
         for(int i = 0; i < insertedBodies->size(); i++) {
-            sf::Texture& textureBody = const_cast<sf::Texture&>(*insertedBodies->at(i)->sprite_->sprite_.getTexture());
-            textureBody.loadFromFile(insertedBodies->at(i)->nameImg);
-            insertedBodies->at(i)->id = insertedBodies->at(i)->id + rigid_bodies->size();
             rigid_bodies->push_back(insertedBodies->at(i));
         }
 

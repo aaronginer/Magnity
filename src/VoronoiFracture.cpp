@@ -274,6 +274,7 @@ int VoronoiFracture::getIndexPtn(sf::Vector3<double> vPoint) {
 }
 
 void VoronoiFracture::calculateVoronoiFracture(std::vector<RigidBody*> *insertedBodies) {
+    sf::Image image = rigidBody->sprite_->sprite_.getTexture()->copyToImage();
     for (int i = 0; i < this->rigidBody->sprite_->getSize().x; i++) {
         for (int j = 0; j < this->rigidBody->sprite_->getSize().y; j++) {
             std::pair<sf::Vector3 < double>,
@@ -284,10 +285,8 @@ void VoronoiFracture::calculateVoronoiFracture(std::vector<RigidBody*> *inserted
             int idxClosestPtn = vPointsIDX.at(std::pair<int, int>(closestPoints.first.x, closestPoints.first.y));
             if (d < 0) {
                 // Set the pixel in image_fracture using the corresponding pixel from the array
-                if(rigidBody->sprite_->sprite_.getTexture()->copyToImage().getPixel(i, j).a != NULL) {
-                    this->rigidBodesImages.at(idxClosestPtn).setPixel(i, j, rigidBody->sprite_->sprite_.getTexture()->copyToImage().getPixel(i, j));
-                    std::string filename = "img" + std::to_string(idxClosestPtn) + ".png";
-                    this->rigidBodesImages.at(idxClosestPtn).saveToFile(filename);
+                if(image.getPixel(i, j).a != NULL) {
+                    this->rigidBodesImages.at(idxClosestPtn).setPixel(i, j, image.getPixel(i, j));
                     this->img.setPixel(i, j, this->colors.at(idxClosestPtn));
                 }
             } else if(d == 0) {
@@ -304,7 +303,9 @@ void VoronoiFracture::calculateVoronoiFracture(std::vector<RigidBody*> *inserted
     int i = 0;
     sf::Vector3<double> diff = rigidBody->x - sf::Vector3<double>(10, 10, 0);
 
-    for(auto point : vPoints) {
+    for(int i = 0; i < vPoints.size(); i++) {
+        sf::Vector3<double> point = vPoints[i];
+
         Texture texture;
         int idxPtn = vPointsIDX.at(std::pair<int, int>(point.x, point.y));
         texture.loadFromImage(rigidBodesImages.at(idxPtn));

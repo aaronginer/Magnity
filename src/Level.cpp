@@ -474,8 +474,11 @@ Level* Level::LoadLevel3(sf::RenderWindow& window, tgui::GuiSFML& gui)
 
     // Textures
     sf::Texture* object_texture = new sf::Texture();
-    object_texture->loadFromFile("res/object2.png");
+    object_texture->loadFromFile("res/object.png");
+    sf::Texture* object_texture2 = new sf::Texture();
+    object_texture2->loadFromFile("res/object2.png");
     // Splines
+    Spline* s = new Spline({{200, 200}, {200, HEIGTH-200}, {WIDTH-200, HEIGTH-200}, {WIDTH-200, 200}}, *object_texture, true);
 
     // ParticleDynamics
 
@@ -495,25 +498,25 @@ Level* Level::LoadLevel3(sf::RenderWindow& window, tgui::GuiSFML& gui)
     // targetarea
 
     // create level
-    Level* l = new Level("Level1");
+    Level* l = new Level("Level3");
     l->loaded_textures_.push_back(object_texture);
     // l->rigid_bodies_.push_back(ball);
     // l->rigid_bodies_.push_back(ball2);
 
     for(int i = 0; i < 3; i++) {
-        RigidBody* ball = new RigidBody(1.0, 2.5, 0, 50.0, 50.0, *object_texture, false,
+        RigidBody* ball = new RigidBody(1.0, 2.5, 0, 50.0, 50.0, *object_texture2, false,
                                         223.0 + (i * 25), 400.0f - (i*50), rigid_bodies->size());
         rigid_bodies->push_back(ball);
         l->rigid_bodies_.push_back(ball);
     }
 
     for(int i = 0; i < 3; i++) {
-        RigidBody* ball = new RigidBody(1.0, 2.5, 1, 20.0, 20.0, *object_texture, false,
+        RigidBody* ball = new RigidBody(1.0, 2.5, 1, 20.0, 20.0, *object_texture2, false,
                                         223.0 + (i * 25), 500.0, rigid_bodies->size());
         rigid_bodies->push_back(ball);
         l->rigid_bodies_.push_back(ball);
     }
-
+    l->splines_.push_back(s);
     window.setView(view);
     return l;
 }
