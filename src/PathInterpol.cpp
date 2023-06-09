@@ -99,16 +99,12 @@ Spline::Spline(std::vector<sf::Vector2f> ctrl_points, sf::Texture& texture, bool
 }
 
 void Spline::init()
-{   
-    mutex_.lock();
-    
+{       
     this->arc_length_table_.clear();
     this->segments_.clear();
     this->total_length_ = 0;
     initSegments();
     initArcLengthTable();
-
-    mutex_.unlock();
 }
 
 void Spline::initSegments()
@@ -123,8 +119,6 @@ void Spline::initSegments()
 
 void Spline::update(float time_delta)
 {
-    mutex_.lock();
-
     time_ += time_delta * 1/traversal_speed_;
     double whole, t;
     t = modf(time_, &whole);
@@ -140,8 +134,6 @@ void Spline::update(float time_delta)
     
     std::pair<int, float> interpol = searchForU(total_length_ * t);
     this->setPosition(segments_[interpol.first].getPoint(interpol.second));
-
-    mutex_.unlock();      
 }
 
 void Spline::drawObject(sf::RenderWindow& window)

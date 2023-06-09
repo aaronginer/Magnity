@@ -1,7 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include "assert.h"
 #include "objects/SpriteObject.h"
-#include <mutex>
 
 #ifndef MAGNITY_PATH_H
 #define MAGNITY_PATH_H
@@ -43,8 +42,6 @@ class Spline : public SpriteObject
 
         sf::Texture ctrl_texture_;
         std::vector<sf::Sprite> ctrl_sprites_;
-
-        std::mutex mutex_;
 
         static bool draw_curve_;
         static bool draw_ctrl_and_arc_;

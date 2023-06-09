@@ -42,8 +42,10 @@ tgui::Panel::Ptr lost_panel;
 std::thread animation_loop_thread;
 
 // Global variables
-int animation_update_rate = 500;
+int animation_update_rate = 100;
+sf::Time time_per_animation_update = sf::seconds(1.0f / 100); 
 int fps = 60;
+sf::Time time_per_frame = sf::seconds(1.0f / 60); 
 
 bool control_panel_visible = false;
 Level* current_level = nullptr;
@@ -51,31 +53,10 @@ bool game_paused = false;
 bool won = false;
 bool lost = false;
 
-void animation_loop()
-{
-    float deltaTime = 0.0f;
-    Clock clock;
-
-    while((*mainWindow).isOpen())
-    {
-        if (game_paused) {
-            clock.restart().asSeconds();
-            continue;
-        }
-        
-        deltaTime = clock.restart().asSeconds();
-
-        if (current_level != nullptr) current_level->update(deltaTime);
-
-        // subtract time needed for calculations
-        usleep((1000000 / animation_update_rate) - clock.getElapsedTime().asMicroseconds());
-    }
-}
-
 int main()
 {
     mainWindow = new sf::RenderWindow(sf::VideoMode(WIDTH, HEIGTH), "Magnity!");
-    (*mainWindow).setFramerateLimit(fps);
+    (*mainWindow).setFramerateLimit(0);
 
     // GUI
     tgui::GuiSFML gui(*mainWindow);
@@ -93,15 +74,18 @@ int main()
 
     current_level = Level::LoadLevel0(*mainWindow, gui);
 
-    animation_loop_thread = std::thread(animation_loop);
-
-    float deltaTime = 0.0f;
+    sf::Time deltaTime = sf::milliseconds(0);
+    sf::Time animation_time_passed = sf::milliseconds(0);
+    sf::Time draw_time_passed = sf::milliseconds(0);
     Clock clock;
     while ((*mainWindow).isOpen())
     {
         assert(current_level);
 
-        deltaTime = clock.restart().asSeconds();
+        deltaTime = clock.restart();
+        animation_time_passed += deltaTime;
+        draw_time_passed += deltaTime;
+
         sf::Vector2f mouse_pos = mainWindow->mapPixelToCoords(sf::Mouse::getPosition(*mainWindow)); // Mouse::getPosition(*mainWindow);
 
         sf::Event event;
@@ -131,10 +115,6 @@ int main()
             }
             else if (event.type == sf::Event::Resized)
             {
-                // if (event.size.width < 800 || event.size.height < 600)
-                // {
-                //     mainWindow->setSize(sf::Vector2u(WIDTH, HEIGTH));
-                // }
                 mainWindow->setSize(sf::Vector2u(WIDTH, HEIGTH));
                 updateControlPanelPosition(control_panel, *mainWindow);
                 updatePausePanelSize(pause_panel, *mainWindow);
@@ -144,21 +124,35 @@ int main()
         }
 
         // instant input handling
-        current_level->handleInstantKeyInput(deltaTime);
+        current_level->handleInstantKeyInput(deltaTime.asSeconds());
         current_level->updateMouseParticlePosition(mouse_pos);
         current_level->handleDrag(mouse_pos);
 
-        // drawing
-        (*mainWindow).clear(current_level == nullptr ? sf::Color::Black : current_level->background_color_);
-        current_level->draw(*mainWindow, deltaTime);
-        control_panel->setVisible(control_panel_visible);
-        pause_panel->setVisible(game_paused && !(won || lost));
-        won_panel->setVisible(won);
-        lost_panel->setVisible(lost);
-        control_button->setVisible(current_level->name.compare("Level0") != 0);
-        gui.draw();
+        // animation updates
+        if (animation_time_passed >= time_per_animation_update)
+        {
+            if (!game_paused)
+            {
+                if (current_level != nullptr) current_level->update(animation_time_passed.asSeconds());
+            }   
+            animation_time_passed = sf::seconds(0);
+        }
 
-        (*mainWindow).display();
+        // drawing
+        if (draw_time_passed >= time_per_frame)
+        {
+            (*mainWindow).clear(current_level == nullptr ? sf::Color::Black : current_level->background_color_);
+            current_level->draw(*mainWindow, draw_time_passed.asSeconds());
+            control_panel->setVisible(control_panel_visible);
+            pause_panel->setVisible(game_paused && !(won || lost));
+            won_panel->setVisible(won);
+            lost_panel->setVisible(lost);
+            control_button->setVisible(current_level->name.compare("Level0") != 0);
+            gui.draw();
+            (*mainWindow).display();
+
+            draw_time_passed = sf::seconds(0);
+        }
     }
 
     return 0;
@@ -219,6 +213,7 @@ tgui::Panel::Ptr createControlPanel(sf::RenderWindow& window)
     animationUpdateRateSlider->onValueChange.connect([animationUpdateRateValueLabel](float value)
     { 
         animation_update_rate = (int) value;
+        time_per_animation_update = sf::seconds(1.f / animation_update_rate);
         animationUpdateRateValueLabel->setText(std::to_string(animation_update_rate));
     });
 
@@ -248,7 +243,7 @@ tgui::Panel::Ptr createControlPanel(sf::RenderWindow& window)
     fpsSlider->onValueChange.connect([fpsValueLabel](float value)
     { 
         fps = (int) value; 
-        (*mainWindow).setFramerateLimit(fps);
+        time_per_frame = sf::seconds(1.f / fps);
         fpsValueLabel->setText(std::to_string(fps));
     });
 
@@ -298,7 +293,7 @@ tgui::Panel::Ptr createControlPanel(sf::RenderWindow& window)
     panel->add(drawParticleTrailsButton);
 
     tgui::Label::Ptr trailHistoryLabel = tgui::Label::create();
-    trailHistoryLabel->setText("PI: Trail history:");
+    trailHistoryLabel->setText("PI: Trail history sec:");
     trailHistoryLabel->setPosition(220, 260);
     trailHistoryLabel->setTextSize(16);
 
@@ -330,7 +325,7 @@ tgui::Panel::Ptr createControlPanel(sf::RenderWindow& window)
     drawParticleFFButton->setText("PD: Draw force-field");
     drawParticleFFButton->setSize(400, 30);
     drawParticleFFButton->setPosition(10, 290);
-    drawParticleFFButton->onPress.connect([&]() { ParticleDynamics::draw_ff = !ParticleDynamics::draw_ff; });
+    drawParticleFFButton->onPress.connect([&]() { printf("wtf\n"); ParticleDynamics::draw_ff = !ParticleDynamics::draw_ff; });
 
     panel->add(drawParticleFFButton);
 

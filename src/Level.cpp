@@ -520,7 +520,7 @@ Level* Level::LoadLevelParticleDemo(sf::RenderWindow& window, tgui::GuiSFML& gui
 
     for (int i = 0; i < 20; i++)
     {
-        Particle* p = new Particle(*object_texture, {std::rand() % WIDTH, std::rand() % HEIGTH}, {0, 0}, std::rand() % 1000);
+        Particle* p = new Particle(*object_texture, {std::rand() % WIDTH, std::rand() % HEIGTH}, {0, 0}, std::rand() % 50000);
         p->sprite_->setScale({0.01f, 0.01f});
         pdyn->addParticle(p);
         pdyn->addForceSource(p);
