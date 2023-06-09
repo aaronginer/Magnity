@@ -22,10 +22,13 @@ using namespace std::chrono;
 const float AR = (float)WIDTH/(float)HEIGTH;
 
 extern void getClickedControlPoint(Level* level, sf::Vector2f mouse_position, sf::Vector2f** ctrl_point, sf::Sprite** ctrl_sprite, Spline** ctrl_spline);
-extern tgui::Button::Ptr createControlsButton();
+tgui::Button::Ptr createControlsButton();
+tgui::Button::Ptr createMenuButton(sf::RenderWindow& window, tgui::Gui& gui, tgui::Panel::Ptr panel);
 
 tgui::Panel::Ptr createControlPanel(sf::RenderWindow& window);
 tgui::Panel::Ptr createPausePanel(sf::RenderWindow& window, tgui::Gui& gui);
+tgui::Panel::Ptr createWonPanel(sf::RenderWindow& window, tgui::Gui& gui);
+tgui::Panel::Ptr createLostPanel(sf::RenderWindow& window, tgui::Gui& gui);
 void updateControlPanelPosition(tgui::Panel::Ptr panel, sf::RenderWindow& window);
 void updatePausePanelSize(tgui::Panel::Ptr panel, sf::RenderWindow& window);
 
@@ -33,6 +36,8 @@ sf::RenderWindow *mainWindow;
 tgui::Panel::Ptr control_panel;
 tgui::Button::Ptr control_button;
 tgui::Panel::Ptr pause_panel;
+tgui::Panel::Ptr won_panel;
+tgui::Panel::Ptr lost_panel;
 
 std::thread animation_loop_thread;
 
@@ -43,6 +48,8 @@ int fps = 60;
 bool control_panel_visible = false;
 Level* current_level = nullptr;
 bool game_paused = false;
+bool won = false;
+bool lost = false;
 
 void animation_loop()
 {
@@ -76,9 +83,13 @@ int main()
     control_panel = createControlPanel(*mainWindow);
     control_button = createControlsButton();
     pause_panel = createPausePanel(*mainWindow, gui);
+    lost_panel = createLostPanel(*mainWindow, gui);
+    won_panel = createWonPanel(*mainWindow, gui);
     gui.add(control_panel);
     gui.add(control_button);
     gui.add(pause_panel);
+    gui.add(won_panel);
+    gui.add(lost_panel);
 
     current_level = Level::LoadLevel0(*mainWindow, gui);
 
@@ -141,7 +152,9 @@ int main()
         (*mainWindow).clear(current_level == nullptr ? sf::Color::Black : current_level->background_color_);
         current_level->draw(*mainWindow, deltaTime);
         control_panel->setVisible(control_panel_visible);
-        pause_panel->setVisible(game_paused);
+        pause_panel->setVisible(game_paused && !(won || lost));
+        won_panel->setVisible(won);
+        lost_panel->setVisible(lost);
         control_button->setVisible(current_level->name.compare("Level0") != 0);
         gui.draw();
 
@@ -358,20 +371,47 @@ tgui::Panel::Ptr createPausePanel(sf::RenderWindow& window, tgui::Gui& gui)
     panel->getRenderer()->setBackgroundColor(sf::Color(50, 50, 50, 128));
     panel->setSize({window.getSize().x, window.getSize().y});
 
-    auto back_to_menu_button = tgui::Button::create();
-    back_to_menu_button->setText("Menu");
-    back_to_menu_button->setSize(100, 30);
-    back_to_menu_button->setOrigin(0.5f, 0.5f);
-    back_to_menu_button->setPosition({panel->getSize().x/2, panel->getSize().y/2});
-    back_to_menu_button->onClick([&window, &gui, &panel](){
-        Level* c = current_level;
-        c->destroy(window);
-        gui.remove(c->level_panel_);
-        current_level = Level::LoadLevel0(window, gui);
-        game_paused = false;
-    });
+    panel->add(createMenuButton(window, gui, panel));
 
-    panel->add(back_to_menu_button);
+    updatePausePanelSize(panel, window);
+
+    return panel;
+}
+
+tgui::Panel::Ptr createWonPanel(sf::RenderWindow& window, tgui::Gui& gui)
+{
+    auto panel = tgui::Panel::create();
+    panel->getRenderer()->setBackgroundColor(sf::Color(50, 50, 50, 128));
+    panel->setSize({window.getSize().x, window.getSize().y});
+
+    tgui::Label::Ptr won_label = tgui::Label::create();
+    won_label->setText("Level Complete!");
+    won_label->setOrigin(0.5f, 0.5f);
+    won_label->setPosition({panel->getSize().x/2, panel->getSize().y/2-100});
+    won_label->setTextSize(16);
+
+    panel->add(won_label);
+    panel->add(createMenuButton(window, gui, panel));
+
+    updatePausePanelSize(panel, window);
+
+    return panel;
+}
+
+tgui::Panel::Ptr createLostPanel(sf::RenderWindow& window, tgui::Gui& gui)
+{
+    auto panel = tgui::Panel::create();
+    panel->getRenderer()->setBackgroundColor(sf::Color(50, 50, 50, 128));
+    panel->setSize({window.getSize().x, window.getSize().y});
+
+    tgui::Label::Ptr lost_label = tgui::Label::create();
+    lost_label->setText("Level Failed!");
+    lost_label->setOrigin(0.5f, 0.5f);
+    lost_label->setPosition({panel->getSize().x/2, panel->getSize().y/2-100});
+    lost_label->setTextSize(16);
+
+    panel->add(lost_label);
+    panel->add(createMenuButton(window, gui, panel));
 
     updatePausePanelSize(panel, window);
 
@@ -404,4 +444,25 @@ tgui::Button::Ptr createControlsButton()
     });
 
     return toggle_button;
+}
+
+// creates a back to menu button
+tgui::Button::Ptr createMenuButton(sf::RenderWindow& window, tgui::Gui& gui, tgui::Panel::Ptr panel)
+{
+    auto back_to_menu_button = tgui::Button::create();
+    back_to_menu_button->setText("Menu");
+    back_to_menu_button->setSize(100, 30);
+    back_to_menu_button->setOrigin(0.5f, 0.5f);
+    back_to_menu_button->setPosition({panel->getSize().x/2, panel->getSize().y/2});
+    back_to_menu_button->onClick([&window, &gui, &panel](){
+        Level* c = current_level;
+        c->destroy(window);
+        gui.remove(c->level_panel_);
+        current_level = Level::LoadLevel0(window, gui);
+        game_paused = false;
+        won = false;
+        lost = false;
+    });
+
+    return back_to_menu_button;
 }

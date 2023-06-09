@@ -23,6 +23,9 @@ class Level {
         
         std::vector<SpriteObject*> game_objects_;
 
+        SpriteObject* object_ = nullptr;
+        SpriteObject* target_area_ = nullptr;
+
         ForceSource* mouse_force = nullptr;
 
         sf::Color background_color_ = sf::Color::White;
@@ -46,8 +49,12 @@ class Level {
 
         void draw(sf::RenderWindow& window, float delta_time);
 
+        void loadFromFile(std::string file_name);
+
         static Level* LoadLevel0(sf::RenderWindow& window, tgui::GuiSFML& gui);
         static Level* LoadLevel1(sf::RenderWindow& window, tgui::GuiSFML& gui);
+        static Level* LoadLevel2(sf::RenderWindow& window, tgui::GuiSFML& gui);
+        static Level* LoadLevel3(sf::RenderWindow& window, tgui::GuiSFML& gui);
         static Level* LoadLevelParticleDemo(sf::RenderWindow& window, tgui::GuiSFML& gui);
         static Level* LoadLevelPathInterpolDemo(sf::RenderWindow& window, tgui::GuiSFML& gui);
         static Level* LoadLevelWindTest(sf::RenderWindow& window, tgui::GuiSFML& gui);

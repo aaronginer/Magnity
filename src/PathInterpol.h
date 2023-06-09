@@ -64,7 +64,7 @@ class Spline : public SpriteObject
         void initSegments();
         void initArcLengthTable();
 
-        void update(float time_delta);
+        void update(float time_delta) override;
 
         void drawObject(sf::RenderWindow& window);
         void drawControlPoints(sf::RenderWindow& window);

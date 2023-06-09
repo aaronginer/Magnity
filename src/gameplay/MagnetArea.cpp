@@ -9,7 +9,7 @@ MagnetArea::~MagnetArea()
 {}
 
 
-void MagnetArea::loadArea(std::string file_path)
+void MagnetArea::load(std::string file_path)
 {
     std::ifstream file(file_path);
 
@@ -37,7 +37,7 @@ void MagnetArea::loadArea(std::string file_path)
             
             this->spawn_points_.push_back({x, y});
         }
-        else if (strcmp(type.c_str(), "area") == 0)
+        else if (strcmp(type.c_str(), "marea") == 0)
         {
             float px, py, sx, sy;
             int floats_parsed = sscanf(rest.c_str(), "%f %f %f %f", &px, &py, &sx, &sy);

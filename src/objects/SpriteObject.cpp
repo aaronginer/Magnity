@@ -1,12 +1,11 @@
 #include "SpriteObject.h"
 
-SpriteObject::SpriteObject(sf::Texture& texture, sf::Vector2f position, float rotation) : GameObject(position, rotation) 
+SpriteObject::SpriteObject(sf::Texture& texture, sf::Vector2f position, int origin) : GameObject(position, 0) 
 {
     this->sprite_.setTexture(texture); 
     this->sprite_.setPosition(this->position_);
 
-    sf::FloatRect bounds = this->sprite_.getLocalBounds();
-    this->sprite_.setOrigin({bounds.width/2, bounds.height/2});
+    this->setOrigin(origin);
 }
 
 void SpriteObject::setScale(sf::Vector2f scale)
@@ -14,8 +13,34 @@ void SpriteObject::setScale(sf::Vector2f scale)
     this->scale_ = scale;
     this->sprite_.setScale(scale);
  
+    this->setOrigin(this->origin_);
+}
+
+void SpriteObject::setOrigin(int origin)
+{   
+    this->origin_ = origin;
     sf::FloatRect bounds = this->sprite_.getLocalBounds();
-    this->sprite_.setOrigin({bounds.width/2, bounds.height/2});
+    switch (this->origin_)
+    {
+        case 0: // center
+            this->sprite_.setOrigin({bounds.width/2, bounds.height/2});
+            break;
+        case 1: // top left
+            this->sprite_.setOrigin({0, 0});
+            break;
+        case 2: // top right
+            this->sprite_.setOrigin({bounds.width, 0});
+            break;
+        case 3: // bottom left
+            this->sprite_.setOrigin({0, bounds.height});
+            break;
+        case 4: // bottom right
+            this->sprite_.setOrigin({bounds.width, bounds.height});
+            break;
+        default:
+            this->sprite_.setOrigin({bounds.width/2, bounds.height/2});
+            break;
+    }
 }
 
 void SpriteObject::setPosition(sf::Vector2f position)

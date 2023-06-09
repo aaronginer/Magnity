@@ -12,7 +12,7 @@ public:
     MagnetArea();
     ~MagnetArea();
 
-    void loadArea(std::string file_path);
+    void load(std::string file_path);
     void draw(sf::RenderWindow& window);
 
     bool testLocationInBounds(sf::Vector2f location);

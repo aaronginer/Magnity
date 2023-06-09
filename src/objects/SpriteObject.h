@@ -6,11 +6,15 @@
 class SpriteObject : public GameObject {
 public:
     sf::Sprite sprite_;
+    int origin_;
 
-    SpriteObject(sf::Texture& texture, sf::Vector2f position, float rotation=0);
+    SpriteObject(sf::Texture& texture, sf::Vector2f position, int origin=0);
 
     virtual ~SpriteObject() {}
 
+    sf::Sprite& getSprite() { return this->sprite_; }
+
+    void setOrigin(int origin);
     void setScale(sf::Vector2f scale) override;
     void setRotation(float rotation) override;
     void setPosition(sf::Vector2f position) override;
@@ -18,7 +22,8 @@ public:
     
     bool contains(sf::Vector2f pos);
 
-    sf::Sprite& getSprite() { return this->sprite_; }
+    virtual void update(float delta_time) {};
+
     void draw(sf::RenderWindow& window) override;
 };
 
