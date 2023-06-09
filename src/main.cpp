@@ -325,7 +325,7 @@ tgui::Panel::Ptr createControlPanel(sf::RenderWindow& window)
     drawParticleFFButton->setText("PD: Draw force-field");
     drawParticleFFButton->setSize(400, 30);
     drawParticleFFButton->setPosition(10, 290);
-    drawParticleFFButton->onPress.connect([&]() { printf("wtf\n"); ParticleDynamics::draw_ff = !ParticleDynamics::draw_ff; });
+    drawParticleFFButton->onPress.connect([&]() { ParticleDynamics::draw_ff = !ParticleDynamics::draw_ff; });
 
     panel->add(drawParticleFFButton);
 

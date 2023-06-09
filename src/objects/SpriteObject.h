@@ -7,6 +7,7 @@ class SpriteObject : public GameObject {
 public:
     sf::Sprite sprite_;
     int origin_;
+    bool destroy_if_too_far_ = false;
 
     SpriteObject(sf::Texture& texture, sf::Vector2f position, int origin=0);
 
@@ -25,6 +26,7 @@ public:
     virtual void update(float delta_time) {};
 
     void draw(sf::RenderWindow& window) override;
+    bool checkDestroy(sf::RenderWindow& window);
 };
 
 #endif // MAGNITY_SPRITEO_H

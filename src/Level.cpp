@@ -1,6 +1,7 @@
 #include "Level.h"
 #include "cstdlib"
 #include "cmath"
+#include "background/LeafSpawner.h"
 
 #define WIDTH 1200
 #define HEIGTH 800
@@ -58,6 +59,7 @@ void Level::destroy(sf::RenderWindow& window)
     }
 
     delete magnet_area_;
+    delete wall_area_;
     delete target_area_;
     // delete object_;
 
@@ -73,6 +75,7 @@ void Level::update(float time_delta)
 
     for (ParticleDynamics* p : this->particle_dynamics_)
     {
+        LeafSpawner::instance()->spawnLeaf(p);
         p->update(time_delta);
     }
 
@@ -116,6 +119,11 @@ void Level::draw(sf::RenderWindow& window, float delta_time)
     if (magnet_area_ != nullptr)
     {
         magnet_area_->draw(window);
+    }
+
+    if (wall_area_ != nullptr)
+    {
+        wall_area_->draw(window);
     }
 
     if (target_area_ != nullptr)
@@ -244,10 +252,10 @@ Level* Level::LoadLevel0(sf::RenderWindow& window, tgui::GuiSFML& gui)
     level3_button->setOrigin(0.5f, 0.5f);
     level3_button->setPosition({panel->getPosition().x+300, panel->getPosition().y+100});
     level3_button->onClick([&window, &gui, &panel](){
-        // Level* c = current_level;
-        // c->destroy(window);
-        // gui.remove(c->level_panel_);
-        // current_level = LoadLevel3(window, gui);
+        Level* c = current_level;
+        c->destroy(window);
+        gui.remove(c->level_panel_);
+        current_level = LoadLevel3(window, gui);
     });
 
     panel->add(level3_button);
@@ -368,7 +376,11 @@ Level* Level::LoadLevel1(sf::RenderWindow& window, tgui::GuiSFML& gui)
 
     // Magnetarea
     MagnetArea* ma = new MagnetArea();
-    ma->load("res/area_definitions/ma_l1.txt");
+    ma->load("res/area_definitions/l1.txt");
+    
+    // Walls
+    WallArea* wa = new WallArea();
+    wa->load("res/area_definitions/l1.txt");
 
     // targetarea
     SpriteObject* ta = new SpriteObject(*target_texture, {500, 0}, 1);
@@ -389,6 +401,7 @@ Level* Level::LoadLevel1(sf::RenderWindow& window, tgui::GuiSFML& gui)
     l->magnets_.push_back(m1);
     l->magnets_.push_back(m2);
     l->magnet_area_ = ma;
+    l->wall_area_ = wa;
     l->target_area_ = ta;
     l->object_ = p->sprite_;
 
@@ -436,7 +449,7 @@ Level* Level::LoadLevel2(sf::RenderWindow& window, tgui::GuiSFML& gui)
 
     // Magnetarea
     MagnetArea* ma = new MagnetArea();
-    ma->load("res/area_definitions/ma_l1.txt");
+    ma->load("res/area_definitions/l1.txt");
 
     // targetarea
     Spline* ta = new Spline({{500, 100}, {500, 100}, {500, 700}, {500, 700}}, *target_texture, true);
@@ -451,7 +464,7 @@ Level* Level::LoadLevel2(sf::RenderWindow& window, tgui::GuiSFML& gui)
     m2->setForceSource(f_m2);
 
     // create level
-    Level* l = new Level("Level1");
+    Level* l = new Level("Level2");
     l->loaded_textures_.push_back(object_texture);
     l->loaded_textures_.push_back(target_texture);
     l->particle_dynamics_.push_back(pdyn);
@@ -460,6 +473,50 @@ Level* Level::LoadLevel2(sf::RenderWindow& window, tgui::GuiSFML& gui)
     l->magnet_area_ = ma;
     l->target_area_ = ta;
     l->object_ = p->sprite_;
+
+    l->mouse_force = f_mouse;
+
+    window.setView(view);
+    return l;
+}
+
+Level* Level::LoadLevel3(sf::RenderWindow& window, tgui::GuiSFML& gui)
+{
+    LeafSpawner::instance()->enable();
+    View view(sf::FloatRect(0.f, 0.f, (float) WIDTH, (float) HEIGTH));
+
+    // Textures
+
+    // Splines
+
+    // ParticleDynamics
+    ParticleDynamics* pdyn = new ParticleDynamics(true);
+
+    ForceSource* f_mouse = new ForceSource(ForceType::AntiGravity, {0, 0}, 500000);
+    ForceSource* f_c = new ForceSource(ForceType::Constant, {5000, 0});
+    ForceSource* f_g = new ForceSource(ForceType::Constant, {0, 981});
+
+    for (int i = 0; i < 10; i++)
+    {   
+        sf::Vector2f pos = {std::rand() % WIDTH, std::rand() % HEIGTH};
+        ForceSource* f = new ForceSource(ForceType::Gravity, pos, 20000 + std::rand() % 400000);
+        pdyn->addForceSource(f);
+    }
+    pdyn->addForceSource(f_mouse);
+    pdyn->addForceSource(f_c);
+    pdyn->addForceSource(f_g);
+
+    // RigidBodies
+
+    // Magnets
+
+    // Magnetarea
+
+    // targetarea
+
+    // create level
+    Level* l = new Level("Level3");
+    l->particle_dynamics_.push_back(pdyn);
 
     l->mouse_force = f_mouse;
 

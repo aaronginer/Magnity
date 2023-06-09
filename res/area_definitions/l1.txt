@@ -5,3 +5,5 @@ marea 20 500 300 100
 marea 1000 10 100 700
 
 
+warea_fixed 5 5 200 100
+warea_bouncy 5 200 200 100

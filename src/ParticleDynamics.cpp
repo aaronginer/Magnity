@@ -3,7 +3,7 @@
 #include "algorithm"
 
 #define M_PI 3.14159265358979323846
-#define PIXELS_PER_UNIT 100000.f
+#define PIXELS_PER_UNIT 10000.f
 
 // static float distance(sf::Vector2f v1, sf::Vector2f v2)
 // {
@@ -75,14 +75,14 @@ sf::Vector2f ForceSource::getForce(sf::Vector2f x /*pos*/, float m /*m*/)
 
 void ForceSource::draw(sf::RenderWindow& window)
 {
-    if (this->type_ != ForceType::Gravity && this->type_ == ForceType::AntiGravity) return;
+    // if (this->type_ != ForceType::Gravity && this->type_ == ForceType::AntiGravity) return;
 
-    sf::CircleShape c;
-    c.setPosition(this->x_);
-    c.setFillColor(sf::Color(255*this->m_/50000.f, 0, 0));
-    c.setOrigin({10,10});
-    c.setRadius(10);
-    window.draw(c);
+    // sf::CircleShape c;
+    // c.setPosition(this->x_);
+    // c.setFillColor(sf::Color(255*this->m_/50000.f, 0, 0));
+    // c.setOrigin({10,10});
+    // c.setRadius(10);
+    // window.draw(c);
 }
 
 bool ParticleDynamics::draw_trails = false;
@@ -232,9 +232,17 @@ void ParticleDynamics::draw(sf::RenderWindow& window, float delta_time)
     }
     
 
-    for (Particle* p : particles)
+    for (auto iter = this->particles.begin(); iter != this->particles.end();)
     {
-        p->sprite_->draw(window);
+        (*iter)->sprite_->draw(window);
+
+        // delete particle if feature enabled and if too far away from screen center
+        if ((*iter)->sprite_->checkDestroy(window))
+        {
+            iter = this->particles.erase(iter);
+            continue;
+        }
+        iter++;
     }
 }
 

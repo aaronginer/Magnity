@@ -6,6 +6,7 @@
 #include "ParticleDynamics.h"
 #include "objects/Magnet.h"
 #include "gameplay/MagnetArea.h"
+#include "gameplay/WallArea.h"
 #include <vector>
 
 #ifndef MAGNITY_LEVEL_H
@@ -20,6 +21,7 @@ class Level {
         std::vector<sf::Texture*> loaded_textures_;
         std::vector<Magnet*> magnets_;
         MagnetArea* magnet_area_ = nullptr;
+        WallArea* wall_area_ = nullptr;
         
         std::vector<SpriteObject*> game_objects_;
 

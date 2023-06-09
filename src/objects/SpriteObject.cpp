@@ -1,4 +1,5 @@
 #include "SpriteObject.h"
+#include "cmath"
 
 SpriteObject::SpriteObject(sf::Texture& texture, sf::Vector2f position, int origin) : GameObject(position, 0) 
 {
@@ -72,4 +73,14 @@ void SpriteObject::draw(sf::RenderWindow& window)
     if (!this->active_) return;
     
     window.draw(this->sprite_);
+}
+
+bool SpriteObject::checkDestroy(sf::RenderWindow& window)
+{
+    if (!destroy_if_too_far_) return false;
+
+    sf::Vector2f v = window.getView().getCenter() - this->getPosition(); 
+
+    if (sqrt(pow(v.x, 2) + pow(v.y, 2)) > 1000) return true;
+    return false;
 }
