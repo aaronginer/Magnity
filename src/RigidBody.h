@@ -65,6 +65,7 @@ class RigidBody {
         std::string nameImg;
         bool visible = true;
         bool contact_border = false;
+        
 
     ////spatial variables
         //Center of mass at (0,0,0)

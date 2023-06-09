@@ -3,7 +3,7 @@ CC = g++
 CFLAGS = -std=c++17 -Wall # -Werror -pedantic
 
 # SFML libraries
-SFML_LIBS = -lsfml-graphics -lsfml-window -lsfml-system
+SFML_LIBS = -lsfml-graphics -lsfml-window -lsfml-system -lX11
 
 # SFML libraries
 TGUI_LIBS = -ltgui

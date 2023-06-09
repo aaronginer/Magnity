@@ -5,7 +5,6 @@
 #include "RigidBody.h"
 #include <cstdlib>
 #include <nanoflann.hpp>
-#include "KDTreeVectorOfVectorsAdaptor.h"
 
 class VoronoiFracture {
 public:

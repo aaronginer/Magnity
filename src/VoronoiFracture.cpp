@@ -9,7 +9,6 @@ int id = 0;
 VoronoiFracture::VoronoiFracture(RigidBody* rigidBody, sf::Vector3<double> collisionPoint) {
     this->rigidBody = rigidBody;
     computeVoronoiPoints(collisionPoint);
-    //computeDistanceField(rigid_bodies); //using nanoflann
 
     sf::Image image;
     image.create(rigidBody->body.getSize().x, rigidBody->body.getSize().y, sf::Color::Transparent);
@@ -33,61 +32,64 @@ void VoronoiFracture::computeVoronoiPoints(sf::Vector3<double> entryPoint) {
 
     //TODO: round number to integer
 
+    float size_x = rigidBody->body.getTexture()->getSize().x;
+    float size_y = rigidBody->body.getTexture()->getSize().y;
+
     if(distObj.x > 0) {
         if(distObj.y > 0) {
-            concentrated_maxX = rigidBody->body.getTexture()->getSize().x / 2;
+            concentrated_maxX = size_x / 2;
             concentrated_minX = 0.0;
-            concentrated_maxY = rigidBody->body.getTexture()->getSize().y;
-            concentrated_minY = rigidBody->body.getTexture()->getSize().y / 2;
+            concentrated_maxY = size_y;
+            concentrated_minY = size_y / 2;
         }
         else if(distObj.y < 0) {
-            concentrated_maxX = rigidBody->body.getTexture()->getSize().x / 2;
+            concentrated_maxX = size_x / 2;
             concentrated_minX = 0.0;
-            concentrated_maxY = rigidBody->body.getTexture()->getSize().y / 2;
+            concentrated_maxY = size_y / 2;
             concentrated_minY = 0.0;
         }
         else { // y is zero
             concentrated_maxX = 0.0;
             concentrated_minX = 0.0;
-            concentrated_maxY = rigidBody->body.getTexture()->getSize().y;
+            concentrated_maxY = size_y;
             concentrated_minY = 0.0;
         }
     } else if(distObj.x < 0) {
         if(distObj.y > 0) {
-            concentrated_maxX = rigidBody->body.getTexture()->getSize().x;
-            concentrated_minX = rigidBody->body.getTexture()->getSize().x / 2;;
-            concentrated_maxY = rigidBody->body.getTexture()->getSize().y;
-            concentrated_minY = rigidBody->body.getTexture()->getSize().y / 2;;
+            concentrated_maxX = size_x;
+            concentrated_minX = size_x / 2;;
+            concentrated_maxY = size_y;
+            concentrated_minY = size_y / 2;;
         }
         else if(distObj.y < 0) {
-            concentrated_maxX = rigidBody->body.getTexture()->getSize().x;
-            concentrated_minX = rigidBody->body.getTexture()->getSize().x / 2;;
-            concentrated_maxY = rigidBody->body.getTexture()->getSize().y / 2;;
+            concentrated_maxX = size_x;
+            concentrated_minX = size_x / 2;;
+            concentrated_maxY = size_y / 2;;
             concentrated_minY = 0.0;
         }
         else { // y is zero
-            concentrated_maxX = rigidBody->body.getTexture()->getSize().x;
-            concentrated_minX = rigidBody->body.getTexture()->getSize().x / 2;
-            concentrated_maxY = rigidBody->body.getTexture()->getSize().y;
+            concentrated_maxX = size_x;
+            concentrated_minX = size_x / 2;
+            concentrated_maxY = size_y;
             concentrated_minY = 0.0;
         }
     } else if(distObj.x == 0) {
         if(distObj.y > 0) {
-            concentrated_maxX = rigidBody->body.getTexture()->getSize().x;
+            concentrated_maxX = size_x;
             concentrated_minX = 0.0;
-            concentrated_maxY = rigidBody->body.getTexture()->getSize().y;
-            concentrated_minY = rigidBody->body.getTexture()->getSize().y / 2;;
+            concentrated_maxY = size_y;
+            concentrated_minY = size_y / 2;;
         }
         else if(distObj.y < 0) {
-            concentrated_maxX = rigidBody->body.getTexture()->getSize().x;
+            concentrated_maxX = size_x;
             concentrated_minX = 0.0;
-            concentrated_maxY = rigidBody->body.getTexture()->getSize().y / 2;;
+            concentrated_maxY = size_y / 2;;
             concentrated_minY = 0.0;
         } else if(distObj.y == 0) {
-            concentrated_minX = (rigidBody->body.getTexture()->getSize().x / 2) / 2;
-            concentrated_maxX = (rigidBody->body.getTexture()->getSize().x / 2) + concentrated_minX;
-            concentrated_minY = (rigidBody->body.getTexture()->getSize().y / 2) / 2;
-            concentrated_maxY = (rigidBody->body.getTexture()->getSize().y / 2) + concentrated_minY;
+            concentrated_minX = (size_x / 2) / 2;
+            concentrated_maxX = (size_x / 2) + concentrated_minX;
+            concentrated_minY = (size_y / 2) / 2;
+            concentrated_maxY = (size_y / 2) + concentrated_minY;
         }
     }
 
@@ -120,14 +122,14 @@ void VoronoiFracture::computeVoronoiPoints(sf::Vector3<double> entryPoint) {
     float y = distrGeneral(genGeneral);
     this->voronoiPoints.push_back({x,y});
     vPoints.push_back({x,y,0});
-    vPointsIDX.insert({std::pair<int,int>(x,y), id});
+    vPointsIDX.insert({std::pair<int,int>(x,y), 4});
     id++;
 
     x = distrGeneral(genGeneral);
     y = distrGeneral(genGeneral);
     vPoints.push_back({x,y,0});
     this->voronoiPoints.push_back({x,y});
-    vPointsIDX.insert({std::pair<int,int>(x,y), id});
+    vPointsIDX.insert({std::pair<int,int>(x,y), 5});
 }
 
 double VoronoiFracture::isInsideOutside(sf::Vector3<double> vPa, sf::Vector3<double> vPb, sf::Vector3<double> voxel) {
@@ -152,89 +154,6 @@ double VoronoiFracture::isInsideOutside(sf::Vector3<double> vPa, sf::Vector3<dou
         return ((x.x * vPb_vPa.x) + (x.y * vPb_vPa.y) + (x.z * vPb_vPa.z)) * -1; //pa is nearest
     } else { //we have edge
         return 0; //this means we have dge
-    }
-}
-
-void VoronoiFracture::computeDistanceField(std::vector<RigidBody*> *rigid_bodies) {
-    //compute the kd using the nanoflann library
-    // Define the KD tree adaptor using the vector of points
-    //https://github.com/gevago01/nanoflann-kdtree-example/blob/master/main.cpp
-    //using the KDTreeVectorOfVectorsAdapter.h https://github.com/jlblancoc/nanoflann/blob/master/examples/KDTreeVectorOfVectorsAdaptor.h
-    typedef KDTreeVectorOfVectorsAdaptor<std::vector<std::vector<double> >, double> my_kd_tree_t;
-    my_kd_tree_t mat_index(2, this->voronoiPoints);
-    mat_index.index->buildIndex();
-
-    //compute distance field and assign for each point in the sprite,
-    //the closest voronoi point
-    for(int i = 0; i < rigidBody->body.getTexture()->getSize().x; i++) {
-        for(int y = 0; y < rigidBody->body.getTexture()->getSize().y; y++) {
-            // Search for the closest point
-            size_t closestIndex;
-            double closestDistance;
-            std::vector<double> sprite_ptn = {(double)i, (double)y};
-            //If num_clostest = 2 - do i get two indices?
-            mat_index.index->knnSearch(&sprite_ptn[0], 1, &closestIndex, &closestDistance);
-            std::pair<int, int> point = {i, y};
-            distanceField.insert({point, closestIndex});
-        }
-    }
-
-    //fill in distanceFieldOrdered
-    for(auto point : distanceField) {
-        if(distanceFieldOrdered.find(point.second) != distanceFieldOrdered.end()) {
-            distanceFieldOrdered.at(point.second).push_back(point.first);
-        } else {
-            std::vector<std::pair<int,int>> vec;
-            vec.push_back(point.first);
-            distanceFieldOrdered.insert({point.second, vec});
-        }
-    }
-
-    //loop through created segments
-    //create new background images
-    //create new rigid bodies - give them same velocity as broken rigid body
-    //delete broken rigid body
-    int idx = 0;
-    for(auto voronoiPtn : distanceFieldOrdered) {
-        //create new Texture for this new rigid body for voronoi point
-        sf::Image image;
-        image.create(rigidBody->body.getSize().x, rigidBody->body.getSize().y, sf::Color::Transparent);
-        image = rigidBody->body.getTexture()->copyToImage(); //set image to image of original object
-
-        sf::Image image_fracture;
-        image_fracture.create(image.getSize().x, image.getSize().y, sf::Color::Transparent);
-
-        for(int j = 0; j < voronoiPtn.second.size(); j++) {
-            image_fracture.setPixel(voronoiPtn.second.at(j).first, voronoiPtn.second.at(j).second,
-                                    image.getPixel(voronoiPtn.second.at(j).first, voronoiPtn.second.at(j).second));
-        }
-
-        std::string name = "img";
-        name = name + std::to_string(idx);
-        name = name + ".png";
-        image_fracture.saveToFile(name);
-
-        idx++;
-
-            //create new rigid body with new image as texture
-        sf::Texture fracture_texture;
-        fracture_texture.loadFromFile(name);
-        fracture_texture.loadFromImage(image_fracture);
-        //TODO: idk if this gets me the x and y values correctly
-        //std::vector<double> xPoint;
-        sf::Vector3<double> diff = rigidBody->x - sf::Vector3<double>(10, 10, 0);
-        RigidBody* fracture = new RigidBody(rigidBody->mass / 6, 2.5, 0, 50.0, 50.0, fracture_texture, false,
-                                            mat_index.m_data.at(voronoiPtn.first)[0] + diff.x, mat_index.m_data.at(voronoiPtn.first)[1] + diff.y,
-                                            rigid_bodies->size() + insertedBodies.size());
-        fracture->v = rigidBody->v;
-        fracture->P = rigidBody->P;
-        fracture->w = rigidBody->w;
-        fracture->L = rigidBody->L;
-        fracture->torque_vec = rigidBody->torque_vec;
-        fracture->force = rigidBody->force;
-        fracture->splitter = true;
-        fracture->nameImg = name;
-        insertedBodies.push_back(fracture);
     }
 }
 
@@ -273,6 +192,7 @@ int VoronoiFracture::getIndexPtn(sf::Vector3<double> vPoint) {
 }
 
 void VoronoiFracture::calcualteVoronoiFracture(std::vector<RigidBody*> *insertedBodies) {
+    sf::Image img_frac = rigidBody->body.getTexture()->copyToImage();
     for (int i = 0; i < this->rigidBody->body.getTexture()->getSize().x; i++) {
         for (int j = 0; j < this->rigidBody->body.getTexture()->getSize().y; j++) {
             std::pair<sf::Vector3 < double>,
@@ -281,10 +201,12 @@ void VoronoiFracture::calcualteVoronoiFracture(std::vector<RigidBody*> *inserted
             double d = isInsideOutside(closestPoints.first, closestPoints.second, sf::Vector3<double>(i * noise, j * noise, 0));
 
             int idxClosestPtn = vPointsIDX.at(std::pair<int, int>(closestPoints.first.x, closestPoints.first.y));
+            
             if (d < 0) {
                 // Set the pixel in image_fracture using the corresponding pixel from the array
-                if(rigidBody->body.getTexture()->copyToImage().getPixel(i, j).a != NULL) {
-                    this->rigidBodesImages.at(idxClosestPtn).setPixel(i, j, rigidBody->body.getTexture()->copyToImage().getPixel(i, j));
+                if(img_frac.getPixel(i, j).a != NULL) {
+                    printf("%d %d\n", idxClosestPtn, this->rigidBodesImages.size());
+                    this->rigidBodesImages.at(idxClosestPtn).setPixel(i, j, img_frac.getPixel(i, j));
                 }
             }
         }
@@ -292,19 +214,16 @@ void VoronoiFracture::calcualteVoronoiFracture(std::vector<RigidBody*> *inserted
 
     //TODO: put noise over image
     //TODO: use this picture to show voronoi
-    //std::string filename = "img.png"; // Set the desired file name
-    //rigidBody->body.getTexture()->copyToImage().saveToFile(filename);
+    // std::string filename = "img.png"; // Set the desired file name
+    // rigidBody->body.getTexture()->copyToImage().saveToFile(filename);
 
     int i = 0;
     sf::Vector3<double> diff = rigidBody->x - sf::Vector3<double>(10, 10, 0);
 
     for(auto point : vPoints) {
         Texture texture;
-        int idxPtn = vPointsIDX.at(std::pair<int, int>(point.x, point.y));
-        std::string filename = "img" + std::to_string(idxPtn) + ".png";
-        this->rigidBodesImages.at(idxPtn).saveToFile(filename);
-        texture.loadFromImage(rigidBodesImages.at(idxPtn));
-        //texture.loadFromFile("img" + std::to_string(i) + ".png");
+        // int idxPtn = vPointsIDX.at(std::pair<int, int>(point.x, point.y));
+        // texture.loadFromImage(rigidBodesImages.at(idxPtn));
         RigidBody* fracture = new RigidBody(2, 2.5, 0, 50.0, 50.0, texture, false,
                                             point.x + diff.x, point.y + diff.y, insertedBodies->size());
 
@@ -321,7 +240,6 @@ void VoronoiFracture::calcualteVoronoiFracture(std::vector<RigidBody*> *inserted
         fracture->w = rigidBody->w;
         fracture->torque_vec = sf::Vector3<double>(0,0, rigidBody->torque_vec.z * 0.0001);
         fracture->splitter = true;
-        fracture->nameImg = "img" + std::to_string(idxPtn) + ".png";
         insertedBodies->push_back(fracture);
         i++;
     }

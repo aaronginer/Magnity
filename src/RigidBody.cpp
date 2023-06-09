@@ -6,7 +6,6 @@
 
 //array of rigid bodies
 unsigned int highest_id = 0;
-std::vector<VoronoiFracture*> Vfractures;
 
 //TODO: see forum for Rigid Body
 
@@ -42,8 +41,6 @@ RigidBody::RigidBody(double mass, double density, unsigned int type, double widt
     this->angular_acceleration = 0.0;
     this->w = 0.0f;
     this->collision_found = false;
-    VoronoiFracture *fracture = new VoronoiFracture(this, this->x);
-    Vfractures.push_back(fracture);
 
 }
 
@@ -275,7 +272,7 @@ void RigidBody::checkForCollisions(std::vector<RigidBody*> *rigid_bodies, std::v
                                                       (rigid_bodies->at(i)->radius + rigid_bodies->at(j)->radius);
 
                 applyCollision(rigid_bodies->at(i), rigid_bodies->at(j), collision_point);
-                //Vfractures.at(0)->calcualteVoronoiFracture(insertedBodies);
+                (new VoronoiFracture(this, collision_point))->calcualteVoronoiFracture(insertedBodies);
             }
         }
     }

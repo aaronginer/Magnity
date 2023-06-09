@@ -66,7 +66,7 @@ Spline::Spline(std::vector<sf::Vector2f> ctrl_points)
 {
     this->ctrl_points_ = ctrl_points;
 
-    ctrl_texture_.loadFromFile("Users/laurapessl/Desktop/Magnity/res/control_point.png");
+    ctrl_texture_.loadFromFile("res/control_point.png");
     for (size_t i = 0; i < this->ctrl_points_.size(); i++)
     {
         sf::Sprite ctrl_sprite;

@@ -1,5 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include "TGUI/TGUI.hpp"
+#include <X11/Xlib.h>
 
 #include <thread>
 #include <chrono>
@@ -43,6 +44,7 @@ RigidBody* ball_ptr;
 
 //Rigid Body Vector
 std::vector<RigidBody*> *rigid_bodies = new std::vector<RigidBody*>;
+std::mutex rb_mutex_;
 //Borders / Fixed obstacles
 std::vector<Border*> *obstacles = new std::vector<Border*>;
 
@@ -232,16 +234,17 @@ void animation_loop()
 
         //loop through bodies and delete or insert bodies
         for(int i = 0; i < insertedBodies->size(); i++) {
-            sf::Texture& textureBody = const_cast<sf::Texture&>(*insertedBodies->at(i)->body.getTexture());
-            textureBody.loadFromFile("/Users/laurapessl/Desktop/Magnity/macos/bin/" + insertedBodies->at(i)->nameImg);
-            insertedBodies->at(i)->id = insertedBodies->at(i)->id + rigid_bodies->size();
+            rb_mutex_.lock();
             rigid_bodies->push_back(insertedBodies->at(i));
+            rb_mutex_.unlock();
         }
     }
 }
 
 int main()
 {
+    XInitThreads();
+
     mainWindow = new sf::RenderWindow(sf::VideoMode(WIDTH, HEIGTH), "Magnity!");
     (*mainWindow).setFramerateLimit(fps);
     View view(sf::FloatRect(0.f, 0.f, (float) WIDTH, (float) HEIGTH));
@@ -264,19 +267,19 @@ int main()
 
     //------------------------------------- Textures -------------------------------------//
     Texture playerAreaTexture;
-    playerAreaTexture.loadFromFile("/Users/laurapessl/Desktop/Magnity/res/player_area.png");
+    playerAreaTexture.loadFromFile("res/player_area.png");
 
     Texture borderTexture;
-    borderTexture.loadFromFile("/Users/laurapessl/Desktop/Magnity/res/border.png");
+    borderTexture.loadFromFile("res/border.png");
 
     Texture objectTexture2;
-    objectTexture2.loadFromFile("/Users/laurapessl/Desktop/Magnity/res/object2.png");
+    objectTexture2.loadFromFile("res/object2.png");
 
     Texture objectTexture;
-    objectTexture.loadFromFile("/Users/laurapessl/Desktop/Magnity/res/object.png");
+    objectTexture.loadFromFile("res/object.png");
 
     Texture magnetTexture;
-    magnetTexture.loadFromFile("Users/laurapessl/Desktop/Magnity/res/magnet.png");
+    magnetTexture.loadFromFile("res/magnet.png");
 
 
     //------------------------------------- Objects  -------------------------------------//
@@ -299,7 +302,7 @@ int main()
     }
 
     for(int i = 0; i < 1; i++) {
-        RigidBody* ball = new RigidBody(1.0, 2.5, 0, 20.0, 20.0, objectTexture2, false,
+        RigidBody* ball = new RigidBody(1.0, 2.5, 1, 20.0, 20.0, objectTexture2, false,
                                         223.0 + (i * 25), 400.0, rigid_bodies->size());
         rigid_bodies->push_back(ball);
     }
@@ -406,7 +409,9 @@ int main()
         panel->setVisible(gui_visible);
         gui.draw();
 
+        rb_mutex_.lock();
         RigidBody::DisplayBodies(*mainWindow, rigid_bodies);
+        rb_mutex_.unlock();
         (*mainWindow).display();
     }
 
