@@ -18,6 +18,7 @@ public:
     void setScale(sf::Vector2f scale) override;
     void setRotation(float rotation) override;
     void setPosition(sf::Vector2f position) override;
+    sf::Vector2f getSize();
     void move(sf::Vector2f mov);
     
     bool contains(sf::Vector2f pos);

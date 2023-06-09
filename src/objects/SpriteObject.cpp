@@ -55,6 +55,12 @@ void SpriteObject::setRotation(float rotation)
     this->sprite_.setRotation(this->rotation_);
 }
 
+sf::Vector2f SpriteObject::getSize()
+{
+    sf::FloatRect bounds = this->sprite_.getLocalBounds();
+    return sf::Vector2f(bounds.width, bounds.height);
+}
+
 void SpriteObject::move(sf::Vector2f mov)
 {
     this->sprite_.move(mov);

@@ -6,6 +6,7 @@
 #include "ParticleDynamics.h"
 #include "objects/Magnet.h"
 #include "gameplay/MagnetArea.h"
+#include "RigidBody.h"
 #include <vector>
 
 #ifndef MAGNITY_LEVEL_H
@@ -15,7 +16,7 @@ class Level {
     public:
         std::vector<Spline*> splines_;
         std::vector<ParticleDynamics*> particle_dynamics_;
-        // std::vector<RigidBody*> rigid_bodies_;
+        std::vector<RigidBody*> rigid_bodies_;
 
         std::vector<sf::Texture*> loaded_textures_;
         std::vector<Magnet*> magnets_;

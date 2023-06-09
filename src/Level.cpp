@@ -1,6 +1,7 @@
 #include "Level.h"
 #include "cstdlib"
 #include "cmath"
+#include "RigidBody.h"
 
 #define WIDTH 1200
 #define HEIGTH 800
@@ -9,6 +10,9 @@ extern Level* current_level;
 extern bool won;
 extern bool lost;
 extern bool game_paused;
+
+//Rigid Body Vector
+extern std::vector<RigidBody*> *rigid_bodies;
 
 Level::Level(std::string name)
 {
@@ -37,10 +41,11 @@ void Level::destroy(sf::RenderWindow& window)
         delete p;
     }
 
-    /*for (RigidBody* r : this->rigid_bodies_)
+    for (RigidBody* r : this->rigid_bodies_)
     {
+        rigid_bodies->clear();
         delete r;
-    }*/
+    }
 
     for (sf::Texture* t : loaded_textures_)
     {
@@ -76,10 +81,10 @@ void Level::update(float time_delta)
         p->update(time_delta);
     }
 
-    /*for (RigidBody* r : this->rigid_bodies_)
+    for (RigidBody* r : this->rigid_bodies_)
     {
-        // update rb
-    }*/
+        
+    }
 
     for (Magnet* m : this->magnets_)
     {
@@ -138,11 +143,7 @@ void Level::draw(sf::RenderWindow& window, float delta_time)
         p->drawTrail(window);
     }
     
-
-    /*for (RigidBody* r : this->rigid_bodies_)
-    {
-        // draw rb
-    }*/
+    RigidBody::DisplayBodies(window, rigid_bodies);
 
     for (GameObject* g : this->game_objects_)
     {
@@ -244,10 +245,10 @@ Level* Level::LoadLevel0(sf::RenderWindow& window, tgui::GuiSFML& gui)
     level3_button->setOrigin(0.5f, 0.5f);
     level3_button->setPosition({panel->getPosition().x+300, panel->getPosition().y+100});
     level3_button->onClick([&window, &gui, &panel](){
-        // Level* c = current_level;
-        // c->destroy(window);
-        // gui.remove(c->level_panel_);
-        // current_level = LoadLevel3(window, gui);
+        Level* c = current_level;
+        c->destroy(window);
+        gui.remove(c->level_panel_);
+        current_level = LoadLevel3(window, gui);
     });
 
     panel->add(level3_button);
@@ -462,6 +463,56 @@ Level* Level::LoadLevel2(sf::RenderWindow& window, tgui::GuiSFML& gui)
     l->object_ = p->sprite_;
 
     l->mouse_force = f_mouse;
+
+    window.setView(view);
+    return l;
+}
+
+Level* Level::LoadLevel3(sf::RenderWindow& window, tgui::GuiSFML& gui)
+{
+    View view(sf::FloatRect(0.f, 0.f, (float) WIDTH, (float) HEIGTH));
+
+    // Textures
+    sf::Texture* object_texture = new sf::Texture();
+    object_texture->loadFromFile("res/object2.png");
+    // Splines
+
+    // ParticleDynamics
+
+    // RigidBodies
+
+    // RigidBody* ball = new RigidBody(1.0, 2.5, 0, 20.0, 20.0, *object_texture, false,
+    //                                     223.0, 400.0, rigid_bodies->size());
+    // rigid_bodies->push_back(ball);
+
+    // RigidBody* ball2 = new RigidBody(1.0, 2.5, 1, 20.0, 20.0, *object_texture, false,
+    //                                     223.0, 800.0, rigid_bodies->size());
+    // rigid_bodies->push_back(ball2);
+
+
+    // Magnets
+    // Magnetarea
+    // targetarea
+
+    // create level
+    Level* l = new Level("Level1");
+    l->loaded_textures_.push_back(object_texture);
+    // l->rigid_bodies_.push_back(ball);
+    // l->rigid_bodies_.push_back(ball2);
+
+    for(int i = 0; i < 3; i++) {
+        RigidBody* ball = new RigidBody(1.0, 2.5, 0, 50.0, 50.0, *object_texture, false,
+                                        223.0 + (i * 25), 400.0f - (i*50), rigid_bodies->size());
+        rigid_bodies->push_back(ball);
+        l->rigid_bodies_.push_back(ball);
+    }
+
+    for(int i = 0; i < 3; i++) {
+        RigidBody* ball = new RigidBody(1.0, 2.5, 1, 20.0, 20.0, *object_texture, false,
+                                        223.0 + (i * 25), 500.0, rigid_bodies->size());
+        rigid_bodies->push_back(ball);
+        l->rigid_bodies_.push_back(ball);
+    }
 
     window.setView(view);
     return l;

@@ -6,6 +6,7 @@
 #include<unistd.h> 
 #include <assert.h>
 #include "PathInterpol.h"
+#include "RigidBody.h"
 
 
 #include <iostream>
@@ -45,11 +46,18 @@ std::thread animation_loop_thread;
 int animation_update_rate = 500;
 int fps = 60;
 
+float total_time = 0.0f;
+
 bool control_panel_visible = false;
 Level* current_level = nullptr;
 bool game_paused = false;
 bool won = false;
 bool lost = false;
+
+//Rigid Body Vector
+std::vector<RigidBody*> *rigid_bodies = new std::vector<RigidBody*>;
+//Borders / Fixed obstacles
+std::vector<Border*> *obstacles = new std::vector<Border*>;
 
 void animation_loop()
 {
@@ -66,6 +74,32 @@ void animation_loop()
         deltaTime = clock.restart().asSeconds();
 
         if (current_level != nullptr) current_level->update(deltaTime);
+
+         //Run Rigid Body simulation
+        std::vector<RigidBody> *rigid_bodies_new = new std::vector<RigidBody>;
+        for(int i = 0; i < rigid_bodies->size(); i++) {
+            rigid_bodies_new->push_back(*rigid_bodies->at(i));
+        }
+
+
+        total_time += deltaTime;
+        std::vector<RigidBody*> deleteBodies;
+        std::vector<RigidBody*> *insertedBodies = new std::vector<RigidBody*>;
+        RigidBody::ode(rigid_bodies, rigid_bodies_new,total_time - deltaTime,
+                       total_time, rigid_bodies, *obstacles, insertedBodies);
+
+
+        //delete rigid_bodies_new we don't need it anymore
+        rigid_bodies_new = nullptr;
+        delete rigid_bodies_new;
+
+        //loop through bodies and delete or insert bodies
+        for(int i = 0; i < insertedBodies->size(); i++) {
+            sf::Texture& textureBody = const_cast<sf::Texture&>(*insertedBodies->at(i)->sprite_->sprite_.getTexture());
+            textureBody.loadFromFile(insertedBodies->at(i)->nameImg);
+            insertedBodies->at(i)->id = insertedBodies->at(i)->id + rigid_bodies->size();
+            rigid_bodies->push_back(insertedBodies->at(i));
+        }
 
         // subtract time needed for calculations
         usleep((1000000 / animation_update_rate) - clock.getElapsedTime().asMicroseconds());
