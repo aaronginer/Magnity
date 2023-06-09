@@ -30,14 +30,13 @@ class RigidBody {
         Matrix calcIbody() const;
         static void DisplayBodies(sf::RenderWindow &window, std::vector<RigidBody*> *rigid_bodies);
         static void ode(std::vector<RigidBody*> *y0, std::vector<RigidBody> *yEnd,  double t0,
-                                           double t1, std::vector<RigidBody*>* rigid_bodies, std::vector<Border*> obstacles,
+                                           double t1, std::vector<RigidBody*>* rigid_bodies,
                                            std::vector<RigidBody*> *insertedBodies);
         sf::Vector3<double> normalizeVector(sf::Vector3<double> vec);
-        void checkForCollisions(std::vector<RigidBody*>* rigid_bodies, std::vector<Border*> obstacles,
-                                                   std::vector<RigidBody*> *insertedBodies);
+        void checkForCollisions(std::vector<RigidBody*>* rigid_bodies, std::vector<RigidBody*> *insertedBodies);
         static void applyVelocityVerletIntegration(RigidBody* rigid_body0, RigidBody* rigid_body1, double timestep);
         void applyCollision(RigidBody* rigidBody1, RigidBody* rigidBody2, sf::Vector3<double> collision_point);
-        void updateRigidBodies(std::vector<RigidBody*> *rigidbodies);
+        static void updateRigidBodies(std::vector<RigidBody*> *rigidbodies, float total_time, float delta_time);
 
         //state variables
         bool fixed;

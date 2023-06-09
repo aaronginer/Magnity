@@ -370,7 +370,6 @@ float VoronoiFracture::fbm (sf::Vector3<double> st) {
         amplitude *= 0.5;
     }
 
-    std::cout << "Value = " << value << std::endl;
     return value;
 }
 

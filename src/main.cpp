@@ -47,7 +47,6 @@ RigidBody* ball_ptr;
 //Rigid Body Vector
 std::vector<RigidBody*> *rigid_bodies = new std::vector<RigidBody*>;
 //Borders / Fixed obstacles
-std::vector<Border*> *obstacles = new std::vector<Border*>;
 
 float total_time = 0.0f;
 
@@ -204,39 +203,10 @@ void createToggleButtons(tgui::Panel::Ptr panel, tgui::Gui& gui)
     });
 }
 
-void animation_update(float deltaTime)
-{
+void animation_update(float deltaTime) {
     // printf("time_delta: %f\n", delta_time.count()/1000.f);
     s.interpolate(deltaTime);
-
-    //Run Rigid Body simulation
-    std::vector<RigidBody> *rigid_bodies_new = new std::vector<RigidBody>;
-    for(int i = 0; i < rigid_bodies->size(); i++) {
-        rigid_bodies_new->push_back(*rigid_bodies->at(i));
-    }
-
-
-    total_time += deltaTime;
-    std::vector<RigidBody*> deleteBodies;
-    std::vector<RigidBody*> *insertedBodies = new std::vector<RigidBody*>;
-    RigidBody::ode(rigid_bodies, rigid_bodies_new,total_time - deltaTime,
-                    total_time, rigid_bodies, *obstacles, insertedBodies);
-
-
-    //loop through bodies and delete or insert bodies
-    for(int i = 0; i < insertedBodies->size(); i++) {
-        //sf::Texture& textureBody = const_cast<sf::Texture&>(*insertedBodies->at(i)->body.getTexture());
-        //textureBody.loadFromFile("/Users/laurapessl/Desktop/Magnity/macos/bin/" + insertedBodies->at(i)->nameImg);
-        insertedBodies->at(i)->id = insertedBodies->at(i)->id + rigid_bodies->size();
-        rigid_bodies->push_back(insertedBodies->at(i));
-    }
-
-    insertedBodies->clear();
-    delete insertedBodies;
-
-    //delete rigid_bodies_new we don't need it anymore
-    rigid_bodies_new->clear();
-    delete rigid_bodies_new;
+    RigidBody::updateRigidBodies(rigid_bodies, total_time, deltaTime);
 }
 
 int main()
@@ -297,13 +267,13 @@ int main()
                                       borderTexture, true, 0.0f, view.getSize().y - player2_area.getArea().getSize().y, rigid_bodies->size());
     rigid_bodies->push_back(border2);
 
-    for(int i = 0; i < 5; i++) {
+    for(int i = 0; i < 1; i++) {
         RigidBody* ball = new RigidBody(1.0, 2.5, 0, 30.0, 30.0, objectTexture, false,
                                         206.0 + (i * 45), 350.0f, rigid_bodies->size());
         rigid_bodies->push_back(ball);
     }
 
-    for(int i = 0; i < 5; i++) {
+    for(int i = 0; i < 1; i++) {
         RigidBody* ball = new RigidBody(1.0, 2.5, 0, 30.0, 30.0, objectTexture2, false,
                                         206.0 + (i * 45), 600.0, rigid_bodies->size());
         ball->v = {1.0f * i, 1.0f * i, 0.0f};

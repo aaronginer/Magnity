@@ -5,7 +5,7 @@
 #include "VoronoiFracture.h"
 
 //array of rigid bodies
-unsigned int highest_id = 0;
+std::vector<RigidBody> *rigid_bodies_new = new std::vector<RigidBody>;
 
 
 //TODO: see forum for Rigid Body
@@ -39,7 +39,6 @@ RigidBody::RigidBody(double mass, double density, unsigned int type, double widt
     this->body.setTexture(&texture);
     this->x = sf::Vector3<double>(posX, posY, 0.0f);
     this->body.setPosition((float)posX, (float)posY);
-    highest_id++;
     this->P = sf::Vector3<double>(0,0,0);
     this->L = 0.0;
     this->angular_acceleration = 0.0;
@@ -132,7 +131,7 @@ void RigidBody::applyVelocityVerletIntegration(RigidBody* rigid_body0, RigidBody
 //we need t in dxdt because we may have time varying forces
 //ode can call dxdt as often as it likes
 void RigidBody::ode(std::vector<RigidBody*> *y0, std::vector<RigidBody> *yEnd, double t0, double t1,
-                                       std::vector<RigidBody*>* rigid_bodies, std::vector<Border*> obstacles,
+                                       std::vector<RigidBody*>* rigid_bodies,
                                         std::vector<RigidBody*> *insertedBodies) {
     //Compute current state of object
     double timestep = t1 - t0;
@@ -150,7 +149,7 @@ void RigidBody::ode(std::vector<RigidBody*> *y0, std::vector<RigidBody> *yEnd, d
 
         //rigid bodies were updated -> now check for collisions at new position
         if(!y0->at(i)->collision_found) {
-            y0->at(i)->checkForCollisions(rigid_bodies, obstacles, insertedBodies);
+            y0->at(i)->checkForCollisions(rigid_bodies, insertedBodies);
             y0->at(i)->collision_found = false;
         }
         else {
@@ -199,61 +198,18 @@ sf::Vector3<double> RigidBody::normalizeVector(sf::Vector3<double> vec) {
     return {(double)(vec.x / calcMagnitude(vec)), (double)(vec.y / calcMagnitude(vec)),(double)(vec.z / calcMagnitude(vec))};
 }
 
-void RigidBody::checkForCollisions(std::vector<RigidBody*> *rigid_bodies, std::vector<Border*> obstacles, std::vector<RigidBody*> *insertedBodies) {
+void RigidBody::checkForCollisions(std::vector<RigidBody*> *rigid_bodies, std::vector<RigidBody*> *insertedBodies) {
     //go through all objects and check for collisions
     for (int i = 0; i < rigid_bodies->size(); i++) {
 
+        //TODO: splitter also can detect collisions?
         if(rigid_bodies->at(i)->collision_found || rigid_bodies->at(i)->splitter || !rigid_bodies->at(i)->visible) {
             continue;
         }
 
-        //check if object is touching borders / obstacles
-        /*for (int j = 0; j < obstacles.size(); j++) {
-            sf::Vector3<double> cOM_obstacle = sf::Vector3<double>(obstacles.at(j)->getPosition().x + (obstacles.at(j)->getShape().getSize().x / 2),
-                                                                   obstacles.at(j)->getPosition().y + (obstacles.at(j)->getShape().getSize().y / 2), 0.0f);
-
-            double distance = ::fabsf(rigid_bodies->at(i)->x.y - cOM_obstacle.y);
-
-            if (distance < (rigid_bodies->at(i)->radius + (obstacles.at(j)->getShape().getSize().y / 2))) {
-
-                if (obstacles.at(j)->getCollisionPointDir() == 0) { // this is top border
-
-                    rigid_bodies->at(i)->x.y = cOM_obstacle.y + (obstacles.at(j)->getShape().getSize().y / 2) + rigid_bodies->at(i)->radius;
-
-                    sf::Vector3<double> collision_point = sf::Vector3<double>(rigid_bodies->at(i)->x.x, rigid_bodies->at(i)->x.y + rigid_bodies->at(i)->radius, 0.0f);
-
-                    sf::Vector3<double> obstacle3d = sf::Vector3<double>(obstacles.at(j)->getPosition().x,
-                                                                         obstacles.at(j)->getPosition().y, 0.0f);
-
-                    RigidBody *rigidBody_border = new RigidBody(100, 100, 1, obstacles.at(j)->getShape().getSize().x,
-                                                                obstacles.at(j)->getShape().getSize().y, *rigid_bodies->at(i)->body.getTexture(), true,
-                                                                collision_point.x, cOM_obstacle.y, rigid_bodies->size());
-                    rigidBody_border->v = {0.0f, 0.0f, 0.0f};
-
-                    applyCollision(rigid_bodies->at(i), rigidBody_border, collision_point);
-
-                    rigid_bodies->at(i)->contact_border = true;
-
-                } else if (obstacles.at(j)->getCollisionPointDir() == 2) { // bottom
-
-                    rigid_bodies->at(i)->x.y = cOM_obstacle.y - (obstacles.at(j)->getShape().getSize().y / 2) - rigid_bodies->at(i)->radius;
-
-                    sf::Vector3<double> collision_point = sf::Vector3<double>(rigid_bodies->at(i)->x.x, rigid_bodies->at(i)->x.y - rigid_bodies->at(i)->radius, 0.0f);
-
-                    RigidBody *rigidBody_border = new RigidBody(100, 100, 1, obstacles.at(j)->getShape().getSize().x,
-                                                                obstacles.at(j)->getShape().getSize().y, *rigid_bodies->at(i)->body.getTexture(), true,
-                                                                collision_point.x, cOM_obstacle.y, rigid_bodies->size());
-                    rigidBody_border->v = {0.0f, 0.0f, 0.0f};
-
-                    applyCollision(rigid_bodies->at(i), rigidBody_border, collision_point);
-
-                    rigid_bodies->at(i)->contact_border = true;
-                }
-            }
-        }*/
         //check if object is touching other rigid body
         for (int j = 0; j < rigid_bodies->size(); j++) {
-            if (j == i || rigid_bodies->at(j)->collision_found || rigid_bodies->at(j)->splitter) {
+            if (j == i || rigid_bodies->at(j)->splitter || !rigid_bodies->at(j)->visible) {
                 continue;
             }
 
@@ -303,12 +259,11 @@ void RigidBody::checkForCollisions(std::vector<RigidBody*> *rigid_bodies, std::v
 
                 }
                 else {
-                    while (distance < (rigid_bodies->at(i)->radius + rigid_bodies->at(j)->radius)) {
-                        rigid_bodies->at(i)->x.x = rigid_bodies->at(i)->x.x - (rigid_bodies->at(i)->v.x * 0.0001f);
-                        rigid_bodies->at(i)->x.y = rigid_bodies->at(i)->x.y - (rigid_bodies->at(i)->v.y * 0.0001f);
-                        distance = std::sqrt(std::pow(rigid_bodies->at(j)->x.x - rigid_bodies->at(i)->x.x, 2) +
-                                             std::pow(rigid_bodies->at(j)->x.y - rigid_bodies->at(i)->x.y, 2));
-                    }
+                    sf::Vector3<double> VNorm = normalizeVector(rigid_bodies->at(i)->v);
+                    sf::Vector3<double> displacement = {VNorm.x * -distanceObj, VNorm.y * -distanceObj, 0.0f};
+
+                    sf::Vector3<double> newCenter = {rigid_bodies->at(i)->x.x + displacement.x,
+                                                     rigid_bodies->at(i)->x.y + displacement.y, 0.0f};
 
                     collision_point = (rigid_bodies->at(i)->x * rigid_bodies->at(j)->radius +
                                                            rigid_bodies->at(j)->x * rigid_bodies->at(i)->radius) /
@@ -316,7 +271,7 @@ void RigidBody::checkForCollisions(std::vector<RigidBody*> *rigid_bodies, std::v
 
                     //TODO: change this function
                     applyCollision(rigid_bodies->at(i), rigid_bodies->at(j), collision_point);
-                    //VoronoiFracture(rigid_bodies->at(i), collision_point).calcualteVoronoiFracture(insertedBodies);
+                    VoronoiFracture(rigid_bodies->at(i), collision_point).calcualteVoronoiFracture(insertedBodies);
                 }
             }
         }
@@ -378,4 +333,34 @@ void RigidBody::applyCollision(RigidBody *rigidBody1, RigidBody *rigidBody2, sf:
 
     rigidBody2->collision_found = true;
     rigidBody1->collision_found = true;
+}
+
+void RigidBody::updateRigidBodies(std::vector<RigidBody *> *rigid_bodies, float total_time, float deltaTime) {
+
+    std::vector<RigidBody> *rigid_bodies_new = new std::vector<RigidBody>;
+    //Run Rigid Body simulation
+    for(int i = 0; i < rigid_bodies->size(); i++) {
+        rigid_bodies_new->push_back(*rigid_bodies->at(i));
+    }
+
+
+    total_time += deltaTime;
+    std::vector<RigidBody*> deleteBodies;
+    std::vector<RigidBody*> *insertedBodies = new std::vector<RigidBody*>;
+    RigidBody::ode(rigid_bodies, rigid_bodies_new,total_time - deltaTime,
+                   total_time, rigid_bodies, insertedBodies);
+
+
+    //loop through bodies and delete or insert bodies
+    for(int i = 0; i < insertedBodies->size(); i++) {
+        insertedBodies->at(i)->id = insertedBodies->at(i)->id + rigid_bodies->size();
+        rigid_bodies->push_back(insertedBodies->at(i));
+    }
+
+    insertedBodies->clear();
+    delete insertedBodies;
+
+    //delete rigid_bodies_new we don't need it anymore
+    rigid_bodies_new->clear();
+    delete rigid_bodies_new;
 }
