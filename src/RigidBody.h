@@ -64,6 +64,7 @@ class RigidBody {
         sf::Texture texture;
         std::string nameImg;
         bool visible = true;
+        bool contact_border = false;
 
     ////spatial variables
         //Center of mass at (0,0,0)

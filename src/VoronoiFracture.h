@@ -25,12 +25,9 @@ public:
     int getIndexPtn(sf::Vector3<double> vPoint);
     std::vector<sf::Image> rigidBodesImages;
     std::vector<sf::Texture> textures;
-    void calculateVoronoiFracture(std::vector<RigidBody*> *insertedBodies);
+    void calcualteVoronoiFracture(std::vector<RigidBody*> *insertedBodies);
     float noise(sf::Vector3<double> st);
     float fbm (sf::Vector3<double> st);
-    sf::Image img;
-    std::vector<sf::Color> colors = {sf::Color::Black, sf::Color::Blue, sf::Color::Red, sf::Color::Yellow,
-                                     sf::Color::Green, sf::Color::Magenta, sf::Color::Cyan};
 
 private:
 

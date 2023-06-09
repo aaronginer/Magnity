@@ -287,6 +287,7 @@ int main()
     Border border_area2(&borderTexture, 0, view.getSize().y - player2_area.getArea().getSize().y, player1_area.getArea().getSize().x, 10.f, 2); //Border player 2 area
     obstacles->push_back(&border_area1);
     obstacles->push_back(&border_area2);
+    //TODO: make obstacles also rigid bodies!
 
     Object object(&objectTexture);
 

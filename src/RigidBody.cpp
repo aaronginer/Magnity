@@ -69,11 +69,15 @@ sf::Vector3<double> RigidBody::calcCrossProd(sf::Vector3<double> vec1, sf::Vecto
 void RigidBody::ComputeForceAndTorque(RigidBody *rb) {
     //compute all forces
     //TODO: check where player magnates are and compute force accordingly
-    if(rb->type == 1) {
-        rb->force = sf::Vector3<double>(rb->force.x, -100.00f * rb->mass, rb->force.z);
-    }
-    else {
-        rb->force = sf::Vector3<double>(rb->force.x, 150.0f * rb->mass, rb->force.z);
+    if(rb->type != 2) {
+        if(rb->type == 1) {
+            //rb->force = sf::Vector3<double>(rb->force.x, (-0.02f * rb->mass) + rb->force.y, rb->force.z);
+            rb->force = sf::Vector3<double>(rb->force.x, -150.0f * rb->mass, rb->force.z);
+        }
+        else {
+            //rb->force = sf::Vector3<double>(rb->force.x, (0.02f * rb->mass) + rb->force.y, rb->force.z);
+            rb->force = sf::Vector3<double>(rb->force.x, 150.00f * rb->mass, rb->force.z);
+        }
     }
 }
 
@@ -143,13 +147,15 @@ void RigidBody::ode(std::vector<RigidBody*> *y0, std::vector<RigidBody> *yEnd, d
 
 
         //rigid bodies were updated -> now check for collisions at new position
-        if(!yEnd->at(i).collision_found) {
-            yEnd->at(i).checkForCollisions(rigid_bodies, obstacles, insertedBodies);
-            yEnd->at(i).collision_found = false;
+        if(!y0->at(i)->collision_found) {
+            y0->at(i)->checkForCollisions(rigid_bodies, obstacles, insertedBodies);
+            y0->at(i)->collision_found = false;
         }
         else {
-            yEnd->at(i).collision_found = false;
+            y0->at(i)->collision_found = false;
         }
+
+        applyVelocityVerletIntegration(y0->at(i), &yEnd->at(i), timestep);
 
         //Update y0
 
@@ -193,8 +199,6 @@ sf::Vector3<double> RigidBody::normalizeVector(sf::Vector3<double> vec) {
 
 void RigidBody::checkForCollisions(std::vector<RigidBody*> *rigid_bodies, std::vector<Border*> obstacles, std::vector<RigidBody*> *insertedBodies) {
     //go through all objects and check for collisions
-    //TODO: make this easier with just the distance between circles
-    //TODO: with border just check y coordinate
     for (int i = 0; i < rigid_bodies->size(); i++) {
 
         if(rigid_bodies->at(i)->collision_found || rigid_bodies->at(i)->splitter || !rigid_bodies->at(i)->visible) {
@@ -226,7 +230,7 @@ void RigidBody::checkForCollisions(std::vector<RigidBody*> *rigid_bodies, std::v
 
                     applyCollision(rigid_bodies->at(i), rigidBody_border, collision_point);
 
-                    //rigid_bodies->at(i)->contact_border = true;
+                    rigid_bodies->at(i)->contact_border = true;
 
                 } else if (obstacles.at(j)->getCollisionPointDir() == 2) { // bottom
 
@@ -241,7 +245,7 @@ void RigidBody::checkForCollisions(std::vector<RigidBody*> *rigid_bodies, std::v
 
                     applyCollision(rigid_bodies->at(i), rigidBody_border, collision_point);
 
-                    //rigid_bodies->at(i)->contact_border = true;
+                    rigid_bodies->at(i)->contact_border = true;
                 }
             }
         }
@@ -271,7 +275,7 @@ void RigidBody::checkForCollisions(std::vector<RigidBody*> *rigid_bodies, std::v
                                                       (rigid_bodies->at(i)->radius + rigid_bodies->at(j)->radius);
 
                 applyCollision(rigid_bodies->at(i), rigid_bodies->at(j), collision_point);
-                Vfractures.at(0)->calculateVoronoiFracture(insertedBodies);
+                //Vfractures.at(0)->calcualteVoronoiFracture(insertedBodies);
             }
         }
     }
@@ -331,4 +335,5 @@ void RigidBody::applyCollision(RigidBody *rigidBody1, RigidBody *rigidBody2, sf:
     rigidBody2->L += rigidBody2->torque_vec.z;
 
     rigidBody2->collision_found = true;
+    rigidBody1->collision_found = true;
 }
