@@ -120,14 +120,14 @@ void VoronoiFracture::computeVoronoiPoints(sf::Vector3<double> entryPoint) {
     float y = distrGeneral(genGeneral);
     this->voronoiPoints.push_back({x,y});
     vPoints.push_back({x,y,0});
-    vPointsIDX.insert({std::pair<int,int>(x,y), id});
+    vPointsIDX.insert({std::pair<int,int>(x,y), 4});
     id++;
 
     x = distrGeneral(genGeneral);
     y = distrGeneral(genGeneral);
     vPoints.push_back({x,y,0});
     this->voronoiPoints.push_back({x,y});
-    vPointsIDX.insert({std::pair<int,int>(x,y), id});
+    vPointsIDX.insert({std::pair<int,int>(x,y), 5});
 }
 
 double VoronoiFracture::isInsideOutside(sf::Vector3<double> vPa, sf::Vector3<double> vPb, sf::Vector3<double> voxel) {
@@ -273,6 +273,7 @@ int VoronoiFracture::getIndexPtn(sf::Vector3<double> vPoint) {
 }
 
 void VoronoiFracture::calcualteVoronoiFracture(std::vector<RigidBody*> *insertedBodies) {
+    sf::Image img = rigidBody->body.getTexture()->copyToImage();
     for (int i = 0; i < this->rigidBody->body.getTexture()->getSize().x; i++) {
         for (int j = 0; j < this->rigidBody->body.getTexture()->getSize().y; j++) {
             std::pair<sf::Vector3 < double>,
@@ -283,8 +284,9 @@ void VoronoiFracture::calcualteVoronoiFracture(std::vector<RigidBody*> *inserted
             int idxClosestPtn = vPointsIDX.at(std::pair<int, int>(closestPoints.first.x, closestPoints.first.y));
             if (d < 0) {
                 // Set the pixel in image_fracture using the corresponding pixel from the array
-                if(rigidBody->body.getTexture()->copyToImage().getPixel(i, j).a != NULL) {
-                    this->rigidBodesImages.at(idxClosestPtn).setPixel(i, j, rigidBody->body.getTexture()->copyToImage().getPixel(i, j));
+                sf::Color c = img.getPixel(i, j);
+                if(c.a != NULL) {
+                    this->rigidBodesImages.at(idxClosestPtn).setPixel(i, j, c);
                 }
             }
         }
@@ -299,27 +301,24 @@ void VoronoiFracture::calcualteVoronoiFracture(std::vector<RigidBody*> *inserted
     sf::Vector3<double> diff = rigidBody->x - sf::Vector3<double>(10, 10, 0);
 
     for(auto point : vPoints) {
-        Texture texture;
+        Texture* texture = new Texture();
         int idxPtn = vPointsIDX.at(std::pair<int, int>(point.x, point.y));
-        std::string filename = "img" + std::to_string(idxPtn) + ".png";
-        this->rigidBodesImages.at(idxPtn).saveToFile(filename);
-        texture.loadFromImage(rigidBodesImages.at(idxPtn));
-        //texture.loadFromFile("img" + std::to_string(i) + ".png");
-        RigidBody* fracture = new RigidBody(2, 2.5, 0, 50.0, 50.0, texture, false,
+        texture->loadFromImage(rigidBodesImages.at(idxPtn));
+        RigidBody* fracture = new RigidBody(2, 2.5, 0, rigidBody->width, rigidBody->height, *texture, false,
                                             point.x + diff.x, point.y + diff.y, insertedBodies->size());
 
         //https://stackoverflow.com/questions/7560114/random-number-c-in-some-range
-        std::random_device rdX; // obtain a random number from hardware
-        std::mt19937 genX(rdX()); // seed the generator
-        std::uniform_int_distribution<> distrX(-100, 100); // define the range
+        //std::random_device rdX; // obtain a random number from hardware
+        //std::mt19937 genX(rdX()); // seed the generator
+        //std::uniform_int_distribution<> distrX(-100, 100); // define the range
 
-        float rand = distrX(genX);
+        //float rand = distrX(genX);
         fracture->v = rigidBody->v;
-        fracture->v.x -= (double)rand;
-        fracture->v.y -= (double)rand;
-        fracture->texture = texture;
+        //fracture->v.x -= (double)rand;
+        //fracture->v.y -= (double)rand;
         fracture->w = rigidBody->w;
-        fracture->torque_vec = sf::Vector3<double>(0,0, rigidBody->torque_vec.z * 0.0001);
+        //fracture->torque_vec = sf::Vector3<double>(0,0, rigidBody->torque_vec.z * 0.0001);
+        fracture->torque_vec = rigidBody->torque_vec;
         fracture->splitter = true;
         fracture->nameImg = "img" + std::to_string(idxPtn) + ".png";
         insertedBodies->push_back(fracture);

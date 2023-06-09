@@ -35,7 +35,10 @@ size_t ctrl_point_to_drag_idx;
 
 // Global variables
 int animation_update_rate = 100;
+sf::Time time_per_animation_update = sf::seconds(1.0f / 100); 
 int fps = 60;
+sf::Time time_per_frame = sf::seconds(1.0f / 60); 
+
 int easing = 0;
 bool gui_visible = true;
 
@@ -102,6 +105,7 @@ void createPathInterpolationPanel(tgui::Panel::Ptr panel, sf::RenderWindow& wind
     animationUpdateRateSlider->onValueChange.connect([animationUpdateRateValueLabel](float value)
     { 
         animation_update_rate = (int) value;
+        time_per_animation_update = sf::seconds(1.f / animation_update_rate);
         animationUpdateRateValueLabel->setText(std::to_string(animation_update_rate));
     });
 
@@ -131,7 +135,7 @@ void createPathInterpolationPanel(tgui::Panel::Ptr panel, sf::RenderWindow& wind
     fpsSlider->onValueChange.connect([fpsValueLabel](float value)
     { 
         fps = (int) value; 
-        (*mainWindow).setFramerateLimit(fps);
+        time_per_frame = sf::seconds(1.f / fps);
         fpsValueLabel->setText(std::to_string(fps));
     });
 
@@ -200,44 +204,39 @@ void createToggleButtons(tgui::Panel::Ptr panel, tgui::Gui& gui)
     });
 }
 
-void animation_loop()
+void animation_update(float deltaTime)
 {
-    float deltaTime = 0.0f;
-    Clock clock;
+    // printf("time_delta: %f\n", delta_time.count()/1000.f);
+    s.interpolate(deltaTime);
 
-    while((*mainWindow).isOpen())
-    {
-        deltaTime = clock.restart().asSeconds();
-
-        // printf("time_delta: %f\n", delta_time.count()/1000.f);
-        s.interpolate(deltaTime);
-
-        //Run Rigid Body simulation
-        std::vector<RigidBody> *rigid_bodies_new = new std::vector<RigidBody>;
-        for(int i = 0; i < rigid_bodies->size(); i++) {
-            rigid_bodies_new->push_back(*rigid_bodies->at(i));
-        }
-
-
-        total_time += deltaTime;
-        std::vector<RigidBody*> deleteBodies;
-        std::vector<RigidBody*> *insertedBodies = new std::vector<RigidBody*>;
-        RigidBody::ode(rigid_bodies, rigid_bodies_new,total_time - deltaTime,
-                       total_time, rigid_bodies, *obstacles, insertedBodies);
-
-
-        //delete rigid_bodies_new we don't need it anymore
-        rigid_bodies_new = nullptr;
-        delete rigid_bodies_new;
-
-        //loop through bodies and delete or insert bodies
-        for(int i = 0; i < insertedBodies->size(); i++) {
-            sf::Texture& textureBody = const_cast<sf::Texture&>(*insertedBodies->at(i)->body.getTexture());
-            textureBody.loadFromFile("/Users/laurapessl/Desktop/Magnity/macos/bin/" + insertedBodies->at(i)->nameImg);
-            insertedBodies->at(i)->id = insertedBodies->at(i)->id + rigid_bodies->size();
-            rigid_bodies->push_back(insertedBodies->at(i));
-        }
+    //Run Rigid Body simulation
+    std::vector<RigidBody> *rigid_bodies_new = new std::vector<RigidBody>;
+    for(int i = 0; i < rigid_bodies->size(); i++) {
+        rigid_bodies_new->push_back(*rigid_bodies->at(i));
     }
+
+
+    total_time += deltaTime;
+    std::vector<RigidBody*> deleteBodies;
+    std::vector<RigidBody*> *insertedBodies = new std::vector<RigidBody*>;
+    RigidBody::ode(rigid_bodies, rigid_bodies_new,total_time - deltaTime,
+                    total_time, rigid_bodies, *obstacles, insertedBodies);
+
+
+    //loop through bodies and delete or insert bodies
+    for(int i = 0; i < insertedBodies->size(); i++) {
+        //sf::Texture& textureBody = const_cast<sf::Texture&>(*insertedBodies->at(i)->body.getTexture());
+        //textureBody.loadFromFile("/Users/laurapessl/Desktop/Magnity/macos/bin/" + insertedBodies->at(i)->nameImg);
+        insertedBodies->at(i)->id = insertedBodies->at(i)->id + rigid_bodies->size();
+        rigid_bodies->push_back(insertedBodies->at(i));
+    }
+
+    insertedBodies->clear();
+    delete insertedBodies;
+
+    //delete rigid_bodies_new we don't need it anymore
+    rigid_bodies_new->clear();
+    delete rigid_bodies_new;
 }
 
 int main()
@@ -282,25 +281,32 @@ int main()
     //------------------------------------- Objects  -------------------------------------//
 
     PlayerArea player1_area(&playerAreaTexture, view, 1);                                    //Player 1 Area
-    PlayerArea player2_area(&playerAreaTexture, view, 2);                                    //Player 1 Area
-    Border border_area1(&borderTexture, 0, player1_area.getArea().getSize().y, player1_area.getArea().getSize().x, 10.f, 0); //Border player 1 area
-    Border border_area2(&borderTexture, 0, view.getSize().y - player2_area.getArea().getSize().y, player1_area.getArea().getSize().x, 10.f, 2); //Border player 2 area
-    obstacles->push_back(&border_area1);
-    obstacles->push_back(&border_area2);
+    PlayerArea player2_area(&playerAreaTexture, view, 2);                                    //Player 1 Area//Border border_area1(&borderTexture, 0, player1_area.getArea().getSize().y, player1_area.getArea().getSize().x, 10.f, 0); //Border player 1 area
+    //Border border_area2(&borderTexture, 0, view.getSize().y - player2_area.getArea().getSize().y, player1_area.getArea().getSize().x, 10.f, 2); //Border player 2 area
+    //obstacles->push_back(&border_area1);
+    //obstacles->push_back(&border_area2);
     //TODO: make obstacles also rigid bodies!
 
     Object object(&objectTexture);
 
+    RigidBody* border1 = new RigidBody(10.0, 2.5, 2, player1_area.getArea().getSize().x, 10.0f,
+                         borderTexture, true, 0.0f, player1_area.getArea().getSize().y, rigid_bodies->size());
+    rigid_bodies->push_back(border1);
 
-    for(int i = 0; i < 1; i++) {
-        RigidBody* ball = new RigidBody(1.0, 2.5, 0, 50.0, 50.0, objectTexture, false,
-                                        206.0 - (i * 45), 350.0f - (i*50), rigid_bodies->size());
+    RigidBody* border2 = new RigidBody(10.0, 2.5, 2, player1_area.getArea().getSize().x, 10.0f,
+                                      borderTexture, true, 0.0f, view.getSize().y - player2_area.getArea().getSize().y, rigid_bodies->size());
+    rigid_bodies->push_back(border2);
+
+    for(int i = 0; i < 5; i++) {
+        RigidBody* ball = new RigidBody(1.0, 2.5, 0, 30.0, 30.0, objectTexture, false,
+                                        206.0 + (i * 45), 350.0f, rigid_bodies->size());
         rigid_bodies->push_back(ball);
     }
 
-    for(int i = 0; i < 1; i++) {
-        RigidBody* ball = new RigidBody(1.0, 2.5, 0, 20.0, 20.0, objectTexture2, false,
-                                        223.0 + (i * 25), 400.0, rigid_bodies->size());
+    for(int i = 0; i < 5; i++) {
+        RigidBody* ball = new RigidBody(1.0, 2.5, 0, 30.0, 30.0, objectTexture2, false,
+                                        206.0 + (i * 45), 600.0, rigid_bodies->size());
+        ball->v = {1.0f * i, 1.0f * i, 0.0f};
         rigid_bodies->push_back(ball);
     }
 
@@ -308,10 +314,16 @@ int main()
     Magnet magnet2(&magnetTexture, view, 2);                                                          //Player 2
 
 
-    test_thread = std::thread(animation_loop);
-
+    sf::Time deltaTime = sf::milliseconds(0);
+    sf::Time animation_time_passed = sf::milliseconds(0);
+    sf::Time draw_time_passed = sf::milliseconds(0);
+    Clock clock;
     while ((*mainWindow).isOpen())
     {
+        deltaTime = clock.restart();
+        animation_time_passed += deltaTime;
+        draw_time_passed += deltaTime;
+     
         sf::Event event;
         while ((*mainWindow).pollEvent(event))
         {
@@ -388,26 +400,39 @@ int main()
 
         //(*mainWindow).setView(view);
 
-        (*mainWindow).clear();
+        // animation updates
+        if (animation_time_passed >= time_per_animation_update)
+        {
+            animation_update(animation_time_passed.asSeconds());   
+            animation_time_passed = sf::seconds(0);
+        }
 
-        player1_area.Draw(*mainWindow);
-        player2_area.Draw(*mainWindow);
-        border_area1.Draw(*mainWindow);
-        border_area2.Draw(*mainWindow);
-        object.Draw(*mainWindow);
-        magnet1.Draw(*mainWindow);
-        magnet2.Draw(*mainWindow);
-        
-        s.drawObject();
-        s.drawCurve();
-        s.drawControlPoints();
-        s.drawArcSamples();
-        
-        panel->setVisible(gui_visible);
-        gui.draw();
+        // drawing
+        if (draw_time_passed >= time_per_frame)
+        {
+            (*mainWindow).clear();
 
-        RigidBody::DisplayBodies(*mainWindow, rigid_bodies);
-        (*mainWindow).display();
+            player1_area.Draw(*mainWindow);
+            player2_area.Draw(*mainWindow);
+            //border_area1.Draw(*mainWindow);
+            //border_area2.Draw(*mainWindow);
+            object.Draw(*mainWindow);
+            magnet1.Draw(*mainWindow);
+            magnet2.Draw(*mainWindow);
+            
+            s.drawObject();
+            s.drawCurve();
+            s.drawControlPoints();
+            s.drawArcSamples();
+            
+            panel->setVisible(gui_visible);
+            gui.draw();
+
+            RigidBody::DisplayBodies(*mainWindow, rigid_bodies);
+            (*mainWindow).display();
+
+            draw_time_passed = sf::seconds(0);
+        }
     }
 
     return 0;

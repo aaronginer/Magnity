@@ -37,8 +37,10 @@ class RigidBody {
                                                    std::vector<RigidBody*> *insertedBodies);
         static void applyVelocityVerletIntegration(RigidBody* rigid_body0, RigidBody* rigid_body1, double timestep);
         void applyCollision(RigidBody* rigidBody1, RigidBody* rigidBody2, sf::Vector3<double> collision_point);
+        void updateRigidBodies(std::vector<RigidBody*> *rigidbodies);
 
         //state variables
+        bool fixed;
         double width;
         double height;
         double mass; //mass of object

@@ -6,7 +6,7 @@
 
 //array of rigid bodies
 unsigned int highest_id = 0;
-std::vector<VoronoiFracture*> Vfractures;
+
 
 //TODO: see forum for Rigid Body
 
@@ -23,16 +23,19 @@ RigidBody::RigidBody(double mass, double density, unsigned int type, double widt
         this->Inertia = (this->mass * (radius * radius)) / 2.0;
         //FROM WIKIPEDIA
     }
+    else if(this->type == 2) {
+        this->body.setOrigin((float)width / 2.0f, (float )height / 2.0f);
+        this->Inertia = (this->mass * ((this->width * this->width) + (this->height + this->height))) / 12; // +??
+        posX += this->width / 2;
+        posY += this->height / 2;
+    }
     else {
-        this->body.setOrigin((float)width / 2.0f, (float)height / 2.0f);
-        this->Inertia = (this->mass * ((this->width * this->width) + (this->height + this->height))) / 12;
-
         radius = this->height / 2.0f;
         this->body.setOrigin((float)radius, (float)radius);
         this->Inertia = (this->mass * (radius * radius)) / 2.0;
         //FROM WIKIPEDIA
     }
-    this->body.setSize({(float)height, (float)width});
+    this->body.setSize({(float)width, (float)height});
     this->body.setTexture(&texture);
     this->x = sf::Vector3<double>(posX, posY, 0.0f);
     this->body.setPosition((float)posX, (float)posY);
@@ -42,8 +45,7 @@ RigidBody::RigidBody(double mass, double density, unsigned int type, double widt
     this->angular_acceleration = 0.0;
     this->w = 0.0f;
     this->collision_found = false;
-    VoronoiFracture *fracture = new VoronoiFracture(this, this->x);
-    Vfractures.push_back(fracture);
+    this->fixed = fixed;
 
 }
 
@@ -136,7 +138,7 @@ void RigidBody::ode(std::vector<RigidBody*> *y0, std::vector<RigidBody> *yEnd, d
     double timestep = t1 - t0;
 
     for(int i = 0; i < y0->size(); i++) {
-        if(!y0->at(i)->visible) {
+        if(!y0->at(i)->visible || y0->at(i)->fixed) {
             continue;
         }
         //std::cout << "Old position = " << y0->at(i)->x.x << ", " << y0->at(i)->x.y << ")" << std::endl;
@@ -206,7 +208,7 @@ void RigidBody::checkForCollisions(std::vector<RigidBody*> *rigid_bodies, std::v
         }
 
         //check if object is touching borders / obstacles
-        for (int j = 0; j < obstacles.size(); j++) {
+        /*for (int j = 0; j < obstacles.size(); j++) {
             sf::Vector3<double> cOM_obstacle = sf::Vector3<double>(obstacles.at(j)->getPosition().x + (obstacles.at(j)->getShape().getSize().x / 2),
                                                                    obstacles.at(j)->getPosition().y + (obstacles.at(j)->getShape().getSize().y / 2), 0.0f);
 
@@ -248,34 +250,74 @@ void RigidBody::checkForCollisions(std::vector<RigidBody*> *rigid_bodies, std::v
                     rigid_bodies->at(i)->contact_border = true;
                 }
             }
-        }
-
+        }*/
         //check if object is touching other rigid body
         for (int j = 0; j < rigid_bodies->size(); j++) {
-            if (j == i || rigid_bodies->at(j)->collision_found) {
+            if (j == i || rigid_bodies->at(j)->collision_found || rigid_bodies->at(j)->splitter) {
                 continue;
             }
 
-            double distance = std::sqrt(std::pow(rigid_bodies->at(j)->x.x - rigid_bodies->at(i)->x.x, 2) +
-                                        std::pow(rigid_bodies->at(j)->x.y - rigid_bodies->at(i)->x.y, 2));
+            double distance = 1000000000.0;
+            double distanceObj = 0.0f;
+            sf::Vector3<double> cOM_obstacle;
+            sf::Vector3<double> collision_point;
+            if(rigid_bodies->at(j)->fixed && rigid_bodies->at(j)->type == 2) {
+                cOM_obstacle = sf::Vector3<double>(rigid_bodies->at(j)->x.x + (rigid_bodies->at(j)->width / 2),
+                                                                       rigid_bodies->at(j)->x.y + (rigid_bodies->at(j)->height / 2), 0.0f);
+
+                distance = ::fabsf(rigid_bodies->at(i)->x.y - cOM_obstacle.y);
+                distanceObj = (rigid_bodies->at(i)->radius + (rigid_bodies->at(j)->height / 2));
+            }
+            else {
+                distance = std::sqrt(std::pow(rigid_bodies->at(j)->x.x - rigid_bodies->at(i)->x.x, 2) +
+                                    std::pow(rigid_bodies->at(j)->x.y - rigid_bodies->at(i)->x.y, 2));
+                distanceObj = rigid_bodies->at(j)->radius + rigid_bodies->at(i)->radius;
+            }
 
 
-            if (distance <= (rigid_bodies->at(i)->radius + rigid_bodies->at(j)->radius)) {
+            if (distance <= distanceObj) {
 
-                while (distance < (rigid_bodies->at(i)->radius + rigid_bodies->at(j)->radius)) {
-                    rigid_bodies->at(i)->x.x = rigid_bodies->at(i)->x.x - (rigid_bodies->at(i)->v.x * 0.0001f);
-                    rigid_bodies->at(i)->x.y = rigid_bodies->at(i)->x.y - (rigid_bodies->at(i)->v.y * 0.0001f);
-                    distance = std::sqrt(std::pow(rigid_bodies->at(j)->x.x - rigid_bodies->at(i)->x.x, 2) +
-                                         std::pow(rigid_bodies->at(j)->x.y - rigid_bodies->at(i)->x.y, 2));
+                int ObstacleX = rigid_bodies->at(j)->x.x;
+                int ObstacleY = rigid_bodies->at(j)->x.y;
+                if(rigid_bodies->at(j)->fixed && rigid_bodies->at(j)->type == 2) {
+                    if(rigid_bodies->at(i)->x.y < rigid_bodies->at(j)->x.y) { // Above
+                        rigid_bodies->at(i)->x.y = cOM_obstacle.y - (rigid_bodies->at(j)->height / 2) - rigid_bodies->at(i)->radius;
+                    } else if(rigid_bodies->at(i)->x.y > rigid_bodies->at(j)->x.y) { //Beneath
+                        rigid_bodies->at(i)->x.y = cOM_obstacle.y + (rigid_bodies->at(j)->height / 2) + rigid_bodies->at(i)->radius;
+                    } else {
+                        if(rigid_bodies->at(i)->x.x < rigid_bodies->at(j)->x.x) { //Left
+                            rigid_bodies->at(i)->x.x = cOM_obstacle.x - (rigid_bodies->at(j)->width / 2) + rigid_bodies->at(i)->radius;
+                        } else { //Right
+                            rigid_bodies->at(i)->x.x = cOM_obstacle.x + (rigid_bodies->at(j)->width / 2) + rigid_bodies->at(i)->radius;
+                        }
+                    }
+                    collision_point = sf::Vector3<double>(rigid_bodies->at(i)->x.x, rigid_bodies->at(i)->x.y + rigid_bodies->at(i)->radius, 0.0f);
+                    rigid_bodies->at(j)->x.x = collision_point.x;
+                    applyCollision(rigid_bodies->at(i), rigid_bodies->at(j), collision_point);
+                    rigid_bodies->at(j)->x.x = ObstacleX;
+                    rigid_bodies->at(j)->x.y = ObstacleY;
+                    rigid_bodies->at(j)->collision_found = false;
+                    rigid_bodies->at(j)->v = {0,0,0};
+                    rigid_bodies->at(j)->torque_vec = {0,0,0};
+                    rigid_bodies->at(j)->L = 0.0f;
+
                 }
+                else {
+                    while (distance < (rigid_bodies->at(i)->radius + rigid_bodies->at(j)->radius)) {
+                        rigid_bodies->at(i)->x.x = rigid_bodies->at(i)->x.x - (rigid_bodies->at(i)->v.x * 0.0001f);
+                        rigid_bodies->at(i)->x.y = rigid_bodies->at(i)->x.y - (rigid_bodies->at(i)->v.y * 0.0001f);
+                        distance = std::sqrt(std::pow(rigid_bodies->at(j)->x.x - rigid_bodies->at(i)->x.x, 2) +
+                                             std::pow(rigid_bodies->at(j)->x.y - rigid_bodies->at(i)->x.y, 2));
+                    }
 
+                    collision_point = (rigid_bodies->at(i)->x * rigid_bodies->at(j)->radius +
+                                                           rigid_bodies->at(j)->x * rigid_bodies->at(i)->radius) /
+                                                          (rigid_bodies->at(i)->radius + rigid_bodies->at(j)->radius);
 
-                sf::Vector3<double> collision_point = (rigid_bodies->at(i)->x * rigid_bodies->at(j)->radius +
-                                                       rigid_bodies->at(j)->x * rigid_bodies->at(i)->radius) /
-                                                      (rigid_bodies->at(i)->radius + rigid_bodies->at(j)->radius);
-
-                applyCollision(rigid_bodies->at(i), rigid_bodies->at(j), collision_point);
-                //Vfractures.at(0)->calcualteVoronoiFracture(insertedBodies);
+                    //TODO: change this function
+                    applyCollision(rigid_bodies->at(i), rigid_bodies->at(j), collision_point);
+                    //VoronoiFracture(rigid_bodies->at(i), collision_point).calcualteVoronoiFracture(insertedBodies);
+                }
             }
         }
     }
