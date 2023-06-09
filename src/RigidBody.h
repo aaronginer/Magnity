@@ -22,17 +22,19 @@ class RigidBody {
 
     public:
         RigidBody(double mass, double density, unsigned int type, double width, double height, const sf::Texture& texture,
-                    bool fixed, double posX, double posY);
+                    bool fixed, double posX, double posY, int id);
 
         static double calcMagnitude(sf::Vector3<double> vec);
         static sf::Vector3<double> calcCrossProd(sf::Vector3<double> vec1, sf::Vector3<double> vec2);
         static void ComputeForceAndTorque(RigidBody *rb);
         Matrix calcIbody() const;
-        Matrix calcIinversebody();
         static void DisplayBodies(sf::RenderWindow &window, std::vector<RigidBody*> *rigid_bodies);
-        static void ode(std::vector<RigidBody*> *y0, std::vector<RigidBody> *yEnd, int len, double t0, double t1, std::vector<RigidBody*>* rigid_bodies, std::vector<Border*> obstacles);
+        static void ode(std::vector<RigidBody*> *y0, std::vector<RigidBody> *yEnd,  double t0,
+                                           double t1, std::vector<RigidBody*>* rigid_bodies, std::vector<Border*> obstacles,
+                                           std::vector<RigidBody*> *insertedBodies);
         sf::Vector3<double> normalizeVector(sf::Vector3<double> vec);
-        void checkForCollisions(std::vector<RigidBody*>* rigid_bodies, std::vector<Border*> obstacles);
+        void checkForCollisions(std::vector<RigidBody*>* rigid_bodies, std::vector<Border*> obstacles,
+                                                   std::vector<RigidBody*> *insertedBodies);
         static void applyVelocityVerletIntegration(RigidBody* rigid_body0, RigidBody* rigid_body1, double timestep);
         void applyCollision(RigidBody* rigidBody1, RigidBody* rigidBody2, sf::Vector3<double> collision_point);
 
@@ -49,18 +51,19 @@ class RigidBody {
         double L; //L(t) angular momentum
         double w; //w(t) angular velocity
         sf::Vector3<double> force; //Sum of forces on object
-        double torque; //Torque - spin
         sf::Vector3<double> torque_vec; //Torque - spin
         std::vector<std::pair<sf::Vector3<double>, sf::Vector3<double>>> force_points;
         double Inertia;
-        Matrix Ibody;
-        bool fixed;
         sf::RectangleShape body;
         unsigned int type;
         double radius;
         bool collision_found = false;
-        bool contact_border = false;
-    private:
+        bool splitter = false;
+        int id = 0;
+        sf::Image img;
+        sf::Texture texture;
+        std::string nameImg;
+        bool visible = true;
 
     ////spatial variables
         //Center of mass at (0,0,0)

@@ -9,7 +9,7 @@ Magnet::Magnet(sf::Texture *texture, View& view, int player) {
         this->magnet.setPosition(40.0f, view.getSize().y - 40.f);
     }
 
-    this->magnet.setOrigin(sf::Vector2(20.f, 20.f));
+    this->magnet.setOrigin(sf::Vector2f(20.f, 20.f));
     this->player = player;
 }
 

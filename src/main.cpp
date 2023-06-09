@@ -212,43 +212,31 @@ void animation_loop()
         // printf("time_delta: %f\n", delta_time.count()/1000.f);
         s.interpolate(deltaTime);
 
-        std::cout << std::endl;
         //Run Rigid Body simulation
         std::vector<RigidBody> *rigid_bodies_new = new std::vector<RigidBody>;
         for(int i = 0; i < rigid_bodies->size(); i++) {
-            RigidBody newbody = RigidBody(
-                    rigid_bodies->at(i)->mass,2.5f,
-                    rigid_bodies->at(i)->type,rigid_bodies->at(i)->width,
-                    rigid_bodies->at(i)->height,*rigid_bodies->at(i)->body.getTexture(),
-                    rigid_bodies->at(i)->fixed,rigid_bodies->at(i)->x.x, rigid_bodies->at(i)->x.y);
-
-            rigid_bodies_new->push_back(newbody);
-
-            rigid_bodies_new->at(i).torque_vec = rigid_bodies->at(i)->torque_vec;
-            rigid_bodies_new->at(i).force_points = rigid_bodies->at(i)->force_points;
-            rigid_bodies_new->at(i).Inertia = rigid_bodies->at(i)->Inertia;
-            rigid_bodies_new->at(i).P = rigid_bodies->at(i)->P;
-            rigid_bodies_new->at(i).angular_acceleration = rigid_bodies->at(i)->angular_acceleration;
-            rigid_bodies_new->at(i).w = rigid_bodies->at(i)->w;
-            rigid_bodies_new->at(i).force = rigid_bodies->at(i)->force;
-            rigid_bodies_new->at(i).linear_acceleration = rigid_bodies->at(i)->linear_acceleration;
-            rigid_bodies_new->at(i).q = rigid_bodies->at(i)->q;
-            rigid_bodies_new->at(i).v = rigid_bodies->at(i)->v;
-            rigid_bodies_new->at(i).L = rigid_bodies->at(i)->L;
+            rigid_bodies_new->push_back(*rigid_bodies->at(i));
         }
 
-        total_time += deltaTime;
 
-        RigidBody::ode(rigid_bodies, rigid_bodies_new, rigid_bodies->size(), total_time - deltaTime, total_time);
-        //rigid bodies were updated -> now check for collisions at new position
-        rigid_bodies->at(0)->checkForCollisions(rigid_bodies, *obstacles);
+        total_time += deltaTime;
+        std::vector<RigidBody*> deleteBodies;
+        std::vector<RigidBody*> *insertedBodies = new std::vector<RigidBody*>;
+        RigidBody::ode(rigid_bodies, rigid_bodies_new,total_time - deltaTime,
+                       total_time, rigid_bodies, *obstacles, insertedBodies);
+
 
         //delete rigid_bodies_new we don't need it anymore
         rigid_bodies_new = nullptr;
         delete rigid_bodies_new;
 
-        //sleep(1000000/ animation_update_rate);
-        //sleep(5);
+        //loop through bodies and delete or insert bodies
+        for(int i = 0; i < insertedBodies->size(); i++) {
+            sf::Texture& textureBody = const_cast<sf::Texture&>(*insertedBodies->at(i)->body.getTexture());
+            textureBody.loadFromFile("/Users/laurapessl/Desktop/Magnity/macos/bin/" + insertedBodies->at(i)->nameImg);
+            insertedBodies->at(i)->id = insertedBodies->at(i)->id + rigid_bodies->size();
+            rigid_bodies->push_back(insertedBodies->at(i));
+        }
     }
 }
 
@@ -275,23 +263,20 @@ int main()
     // OBJECTS
 
     //------------------------------------- Textures -------------------------------------//
-    Texture playerTexture;
-    playerTexture.loadFromFile("res/animation.png");
-
     Texture playerAreaTexture;
-    playerAreaTexture.loadFromFile("res/player_area.png");
+    playerAreaTexture.loadFromFile("/Users/laurapessl/Desktop/Magnity/res/player_area.png");
 
     Texture borderTexture;
-    borderTexture.loadFromFile("res/border.png");
+    borderTexture.loadFromFile("/Users/laurapessl/Desktop/Magnity/res/border.png");
 
     Texture objectTexture2;
-    objectTexture2.loadFromFile("./res/object2.png");
+    objectTexture2.loadFromFile("/Users/laurapessl/Desktop/Magnity/res/object2.png");
 
     Texture objectTexture;
-    objectTexture.loadFromFile("res/object.png");
+    objectTexture.loadFromFile("/Users/laurapessl/Desktop/Magnity/res/object.png");
 
     Texture magnetTexture;
-    magnetTexture.loadFromFile("res/magnet.png");
+    magnetTexture.loadFromFile("Users/laurapessl/Desktop/Magnity/res/magnet.png");
 
 
     //------------------------------------- Objects  -------------------------------------//
@@ -304,19 +289,17 @@ int main()
     obstacles->push_back(&border_area2);
 
     Object object(&objectTexture);
-    /*RigidBody ball(1.0f, 1.0f, 1, 20.0f, 20.0f, objectTexture, false, view.getSize().x/2, view.getSize().y/2);                                                      //Object
-    ball_ptr = &ball;*/
 
 
-    for(int i = 0; i < 2; i++) {
-        RigidBody* ball = new RigidBody(1.0, 2.5, 0, 20.0, 20.0, objectTexture, false,
-                                        206.0+(i * 25), 350.0f);
+    for(int i = 0; i < 1; i++) {
+        RigidBody* ball = new RigidBody(1.0, 2.5, 0, 50.0, 50.0, objectTexture, false,
+                                        206.0 - (i * 45), 350.0f - (i*50), rigid_bodies->size());
         rigid_bodies->push_back(ball);
     }
 
-    for(int i = 0; i < 5; i++) {
-        RigidBody* ball = new RigidBody(1.0, 2.5, 1, 20.0, 20.0, objectTexture2, false,
-                                        206.0+(i * 25), 400.0);
+    for(int i = 0; i < 1; i++) {
+        RigidBody* ball = new RigidBody(1.0, 2.5, 0, 20.0, 20.0, objectTexture2, false,
+                                        223.0 + (i * 25), 400.0, rigid_bodies->size());
         rigid_bodies->push_back(ball);
     }
 
