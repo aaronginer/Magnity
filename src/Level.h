@@ -57,6 +57,7 @@ class Level {
         static Level* LoadLevel1(sf::RenderWindow& window, tgui::GuiSFML& gui);
         static Level* LoadLevel2(sf::RenderWindow& window, tgui::GuiSFML& gui);
         static Level* LoadLevel3(sf::RenderWindow& window, tgui::GuiSFML& gui);
+        static Level* LoadLevel4(sf::RenderWindow& window, tgui::GuiSFML& gui);
         static Level* LoadLevelParticleDemo(sf::RenderWindow& window, tgui::GuiSFML& gui);
         static Level* LoadLevelPathInterpolDemo(sf::RenderWindow& window, tgui::GuiSFML& gui);
         static Level* LoadLevelWindTest(sf::RenderWindow& window, tgui::GuiSFML& gui);

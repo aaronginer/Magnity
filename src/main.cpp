@@ -39,8 +39,6 @@ tgui::Panel::Ptr pause_panel;
 tgui::Panel::Ptr won_panel;
 tgui::Panel::Ptr lost_panel;
 
-std::thread animation_loop_thread;
-
 // Global variables
 int animation_update_rate = 100;
 sf::Time time_per_animation_update = sf::seconds(1.0f / 100); 
@@ -49,6 +47,8 @@ sf::Time time_per_frame = sf::seconds(1.0f / 60);
 
 bool control_panel_visible = false;
 Level* current_level = nullptr;
+Level* (*currentLevelFunction)(sf::RenderWindow& window, tgui::GuiSFML& gui);
+
 bool game_paused = false;
 bool won = false;
 bool lost = false;
@@ -205,7 +205,7 @@ tgui::Panel::Ptr createControlPanel(sf::RenderWindow& window)
     // Create the animation update rate slider and text field
     tgui::Slider::Ptr animationUpdateRateSlider = tgui::Slider::create();
     animationUpdateRateSlider->setMinimum(1.0f);
-    animationUpdateRateSlider->setMaximum(500.0f);
+    animationUpdateRateSlider->setMaximum(240.0f);
     animationUpdateRateSlider->setStep(1.f);
     animationUpdateRateSlider->setValue(animation_update_rate);
     animationUpdateRateSlider->setSize(200, 20);
@@ -406,6 +406,24 @@ tgui::Panel::Ptr createLostPanel(sf::RenderWindow& window, tgui::Gui& gui)
     lost_label->setTextSize(16);
 
     panel->add(lost_label);
+
+    auto restart_level_button = tgui::Button::create();
+    restart_level_button->setText("Restart Level");
+    restart_level_button->setSize(100, 30);
+    restart_level_button->setOrigin(0.5f, 0.5f);
+    restart_level_button->setPosition({panel->getSize().x/2, panel->getSize().y/2+100});
+    restart_level_button->onClick([&window, &gui, &panel](){
+        Level* c = current_level;
+        c->destroy(window);
+        gui.remove(c->level_panel_);
+        current_level = currentLevelFunction(window, gui);
+        game_paused = false;
+        won = false;
+        lost = false;
+    });
+    
+    panel->add(restart_level_button);
+
     panel->add(createMenuButton(window, gui, panel));
 
     updatePausePanelSize(panel, window);

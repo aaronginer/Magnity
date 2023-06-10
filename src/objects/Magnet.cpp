@@ -97,7 +97,7 @@ void Magnet::toggleLevel()
     this->levels_[1]->active_ = this->level_ > 1;
     this->levels_[2]->active_ = this->level_ > 2;
 
-    if (force_source_!= nullptr) this->force_source_->m_ = this->level_ * 5000;
+    if (force_source_!= nullptr) this->force_source_->m_ = this->level_ * 300000;
 }
 
 void Magnet::setFollowObject(GameObject* follow_object)
@@ -109,7 +109,7 @@ void  Magnet::setForceSource(ForceSource* force_source_)
 {
     this->force_source_ = force_source_;
     this->force_source_->x_ = this->magnet_active_->getPosition();
-    this->force_source_->m_ = this->level_ * 5000;
+    this->force_source_->m_ = this->level_ * 300000;
 }
 
 void Magnet::updateRotation()

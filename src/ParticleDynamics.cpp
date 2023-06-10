@@ -75,14 +75,15 @@ sf::Vector2f ForceSource::getForce(sf::Vector2f x /*pos*/, float m /*m*/)
 
 void ForceSource::draw(sf::RenderWindow& window)
 {
+    if (!ParticleDynamics::draw_ff) return; 
     // if (this->type_ != ForceType::Gravity && this->type_ == ForceType::AntiGravity) return;
 
-    // sf::CircleShape c;
-    // c.setPosition(this->x_);
-    // c.setFillColor(sf::Color(255*this->m_/50000.f, 0, 0));
-    // c.setOrigin({10,10});
-    // c.setRadius(10);
-    // window.draw(c);
+    sf::CircleShape c;
+    c.setPosition(this->x_);
+    c.setFillColor(sf::Color(255*this->m_/400000.f, 0, 0));
+    c.setOrigin({5,5});
+    c.setRadius(5);
+    window.draw(c);
 }
 
 bool ParticleDynamics::draw_trails = false;
@@ -231,7 +232,6 @@ void ParticleDynamics::draw(sf::RenderWindow& window, float delta_time)
         }
     }
     
-
     for (auto iter = this->particles.begin(); iter != this->particles.end();)
     {
         (*iter)->sprite_->draw(window);
@@ -304,7 +304,7 @@ void ParticleDynamics::drawForceField(sf::RenderWindow& window, float object_mas
     }
 }
 
-#define MAX_MAGNITUDE 500.f
+#define MAX_MAGNITUDE 5000.f
 void ParticleDynamics::drawArrow(sf::RenderWindow& window, sf::Texture& tex, sf::Vector2f position, sf::Vector2f F)
 {
     sf::RectangleShape arrow;

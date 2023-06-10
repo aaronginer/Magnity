@@ -1,12 +1,13 @@
 #include "Level.h"
 #include "cstdlib"
 #include "cmath"
-#include "background/LeafSpawner.h"
+#include "background/SpriteSpawner.h"
 
 #define WIDTH 1200
 #define HEIGTH 800
 
 extern Level* current_level;
+extern Level* (*currentLevelFunction)(sf::RenderWindow& window, tgui::GuiSFML& gui);
 extern bool won;
 extern bool lost;
 extern bool game_paused;
@@ -75,7 +76,7 @@ void Level::update(float time_delta)
 
     for (ParticleDynamics* p : this->particle_dynamics_)
     {
-        LeafSpawner::instance()->spawnLeaf(p);
+        SpriteSpawner::instance()->spawn(p);
         p->update(time_delta);
     }
 
@@ -116,6 +117,11 @@ void Level::updateMouseParticlePosition(sf::Vector2f new_pos)
 
 void Level::draw(sf::RenderWindow& window, float delta_time)
 {
+    for (GameObject* g : this->game_objects_)
+    {
+        g->draw(window);
+    }
+
     if (magnet_area_ != nullptr)
     {
         magnet_area_->draw(window);
@@ -151,11 +157,6 @@ void Level::draw(sf::RenderWindow& window, float delta_time)
     {
         // draw rb
     }*/
-
-    for (GameObject* g : this->game_objects_)
-    {
-        g->draw(window);
-    }
 
     for (Magnet* m : this->magnets_)
     {
@@ -205,6 +206,8 @@ void Level::handleDrag(sf::Vector2f mouse_position)
 
 Level* Level::LoadLevel0(sf::RenderWindow& window, tgui::GuiSFML& gui)
 {
+    SpriteSpawner::disable();
+
     // view
     View view(sf::FloatRect(0.f, 0.f, (float) WIDTH, (float) HEIGTH));
 
@@ -220,11 +223,12 @@ Level* Level::LoadLevel0(sf::RenderWindow& window, tgui::GuiSFML& gui)
     level1_button->setText("Level 1");
     level1_button->setSize(100, 30);
     level1_button->setOrigin(0.5f, 0.5f);
-    level1_button->setPosition({panel->getPosition().x-300, panel->getPosition().y+100});
+    level1_button->setPosition({panel->getPosition().x-400, panel->getPosition().y+100});
     level1_button->onClick([&window, &gui, &panel](){
         Level* c = current_level;
         c->destroy(window);
         gui.remove(c->level_panel_);
+        currentLevelFunction = &LoadLevel1;
         current_level = LoadLevel1(window, gui);
     });
 
@@ -235,11 +239,12 @@ Level* Level::LoadLevel0(sf::RenderWindow& window, tgui::GuiSFML& gui)
     level2_button->setText("Level 2");
     level2_button->setSize(100, 30);
     level2_button->setOrigin(0.5f, 0.5f);
-    level2_button->setPosition({panel->getPosition().x, panel->getPosition().y+100});
+    level2_button->setPosition({panel->getPosition().x-150, panel->getPosition().y+100});
     level2_button->onClick([&window, &gui, &panel](){
         Level* c = current_level;
         c->destroy(window);
         gui.remove(c->level_panel_);
+        currentLevelFunction = &LoadLevel2;
         current_level = LoadLevel2(window, gui);
     });
 
@@ -250,15 +255,32 @@ Level* Level::LoadLevel0(sf::RenderWindow& window, tgui::GuiSFML& gui)
     level3_button->setText("Level 3");
     level3_button->setSize(100, 30);
     level3_button->setOrigin(0.5f, 0.5f);
-    level3_button->setPosition({panel->getPosition().x+300, panel->getPosition().y+100});
+    level3_button->setPosition({panel->getPosition().x+150, panel->getPosition().y+100});
     level3_button->onClick([&window, &gui, &panel](){
         Level* c = current_level;
         c->destroy(window);
         gui.remove(c->level_panel_);
+        currentLevelFunction = &LoadLevel3;
         current_level = LoadLevel3(window, gui);
     });
 
     panel->add(level3_button);
+
+    // Create start game
+    auto level4_button = tgui::Button::create();
+    level4_button->setText("Level 4");
+    level4_button->setSize(100, 30);
+    level4_button->setOrigin(0.5f, 0.5f);
+    level4_button->setPosition({panel->getPosition().x+400, panel->getPosition().y+100});
+    level4_button->onClick([&window, &gui, &panel](){
+        Level* c = current_level;
+        c->destroy(window);
+        gui.remove(c->level_panel_);
+        currentLevelFunction = &LoadLevel4;
+        current_level = LoadLevel4(window, gui);
+    });
+
+    panel->add(level4_button);
 
 
     auto pi_demo_button = tgui::Button::create();
@@ -347,6 +369,12 @@ Level* Level::LoadLevel1(sf::RenderWindow& window, tgui::GuiSFML& gui)
     object_texture->loadFromFile("res/object.png");
     sf::Texture* target_texture = new sf::Texture();
     target_texture->loadFromFile("res/target.png");
+    sf::Texture* bg_texture = new sf::Texture();
+    bg_texture->loadFromFile("res/spring.jpg");
+
+    // background
+    SpriteObject* background = new SpriteObject(*bg_texture, view.getCenter(), 0);
+    background->setScale({0.5f, 0.5f});
 
     // Splines
 
@@ -397,7 +425,9 @@ Level* Level::LoadLevel1(sf::RenderWindow& window, tgui::GuiSFML& gui)
     Level* l = new Level("Level1");
     l->loaded_textures_.push_back(object_texture);
     l->loaded_textures_.push_back(target_texture);
+    l->loaded_textures_.push_back(bg_texture);
     l->particle_dynamics_.push_back(pdyn);
+    l->game_objects_.push_back(background);
     l->magnets_.push_back(m1);
     l->magnets_.push_back(m2);
     l->magnet_area_ = ma;
@@ -420,6 +450,12 @@ Level* Level::LoadLevel2(sf::RenderWindow& window, tgui::GuiSFML& gui)
     object_texture->loadFromFile("res/object.png");
     sf::Texture* target_texture = new sf::Texture();
     target_texture->loadFromFile("res/target.png");
+    sf::Texture* bg_texture = new sf::Texture();
+    bg_texture->loadFromFile("res/summer.jpg");
+
+    // background
+    SpriteObject* background = new SpriteObject(*bg_texture, view.getCenter(), 0);
+    background->setScale({0.5f, 0.5f});
 
     // Splines
 
@@ -452,7 +488,7 @@ Level* Level::LoadLevel2(sf::RenderWindow& window, tgui::GuiSFML& gui)
     ma->load("res/area_definitions/l1.txt");
 
     // targetarea
-    Spline* ta = new Spline({{500, 100}, {500, 100}, {500, 700}, {500, 700}}, *target_texture, true);
+    Spline* ta = new Spline({{500, 100}, {500, 100}, {500, 500}, {500, 500}}, *target_texture, true);
     ta->setOrigin(1);
     ta->setScale({0.2f, 0.2f});
 
@@ -467,9 +503,11 @@ Level* Level::LoadLevel2(sf::RenderWindow& window, tgui::GuiSFML& gui)
     Level* l = new Level("Level2");
     l->loaded_textures_.push_back(object_texture);
     l->loaded_textures_.push_back(target_texture);
+    l->loaded_textures_.push_back(bg_texture);
     l->particle_dynamics_.push_back(pdyn);
     l->magnets_.push_back(m1);
     l->magnets_.push_back(m2);
+    l->game_objects_.push_back(background);
     l->magnet_area_ = ma;
     l->target_area_ = ta;
     l->object_ = p->sprite_;
@@ -482,24 +520,35 @@ Level* Level::LoadLevel2(sf::RenderWindow& window, tgui::GuiSFML& gui)
 
 Level* Level::LoadLevel3(sf::RenderWindow& window, tgui::GuiSFML& gui)
 {
-    LeafSpawner::instance()->enable();
+    SpriteSpawner::instance()->enable();
+    SpriteSpawner::instance()->setDrag(20);
+    SpriteSpawner::instance()->setSpawnSpeed(0.4);
+    SpriteSpawner::setSpawnRange({-30, -20}, {-50, HEIGTH-50});
+    SpriteSpawner::loadNewTexture("res/leaf.png");
+
     View view(sf::FloatRect(0.f, 0.f, (float) WIDTH, (float) HEIGTH));
 
     // Textures
+    sf::Texture* bg_texture = new sf::Texture();
+    bg_texture->loadFromFile("res/autumn.jpg");
+
+    // background
+    SpriteObject* background = new SpriteObject(*bg_texture, view.getCenter(), 0);
+    background->setScale({0.3f, 0.3f});
 
     // Splines
 
     // ParticleDynamics
     ParticleDynamics* pdyn = new ParticleDynamics(true);
 
-    ForceSource* f_mouse = new ForceSource(ForceType::AntiGravity, {0, 0}, 500000);
+    ForceSource* f_mouse = new ForceSource(ForceType::AntiGravity, {0, 0}, 800000);
     ForceSource* f_c = new ForceSource(ForceType::Constant, {5000, 0});
     ForceSource* f_g = new ForceSource(ForceType::Constant, {0, 981});
 
     for (int i = 0; i < 10; i++)
     {   
         sf::Vector2f pos = {std::rand() % WIDTH, std::rand() % HEIGTH};
-        ForceSource* f = new ForceSource(ForceType::Gravity, pos, 20000 + std::rand() % 400000);
+        ForceSource* f = new ForceSource(ForceType::Gravity, pos, 20000 + std::rand() % 200000);
         pdyn->addForceSource(f);
     }
     pdyn->addForceSource(f_mouse);
@@ -516,7 +565,66 @@ Level* Level::LoadLevel3(sf::RenderWindow& window, tgui::GuiSFML& gui)
 
     // create level
     Level* l = new Level("Level3");
+    l->loaded_textures_.push_back(bg_texture);
     l->particle_dynamics_.push_back(pdyn);
+    l->game_objects_.push_back(background);
+
+    l->mouse_force = f_mouse;
+
+    window.setView(view);
+    return l;
+}
+
+Level* Level::LoadLevel4(sf::RenderWindow& window, tgui::GuiSFML& gui)
+{
+    SpriteSpawner::instance()->enable();
+    SpriteSpawner::instance()->setDrag(8);
+    SpriteSpawner::instance()->setSpawnSpeed(0.1);
+    SpriteSpawner::setSpawnRange({-10, WIDTH+10}, {-10, -20});
+    SpriteSpawner::loadNewTexture("res/snowflake.png");
+
+    View view(sf::FloatRect(0.f, 0.f, (float) WIDTH, (float) HEIGTH));
+
+    // Textures
+    sf::Texture* bg_texture = new sf::Texture();
+    bg_texture->loadFromFile("res/winter.png");
+
+    // background
+    SpriteObject* background = new SpriteObject(*bg_texture, view.getCenter(), 0);
+    background->setScale({1.42f, 1.42f});
+
+    // Splines
+
+    // ParticleDynamics
+    ParticleDynamics* pdyn = new ParticleDynamics(true);
+
+    ForceSource* f_mouse = new ForceSource(ForceType::AntiGravity, {0, 0}, 800000);
+    ForceSource* f_c = new ForceSource(ForceType::Constant, {5000, 0});
+    ForceSource* f_g = new ForceSource(ForceType::Constant, {0, 981});
+
+    for (int i = 0; i < 10; i++)
+    {   
+        sf::Vector2f pos = {std::rand() % WIDTH, std::rand() % HEIGTH};
+        ForceSource* f = new ForceSource(ForceType::Gravity, pos, 20000 + std::rand() % 30000);
+        pdyn->addForceSource(f);
+    }
+    pdyn->addForceSource(f_mouse);
+    // pdyn->addForceSource(f_c);
+    pdyn->addForceSource(f_g);
+
+    // RigidBodies
+
+    // Magnets
+
+    // Magnetarea
+
+    // targetarea
+
+    // create level
+    Level* l = new Level("Level4");
+    l->loaded_textures_.push_back(bg_texture);
+    l->particle_dynamics_.push_back(pdyn);
+    l->game_objects_.push_back(background);
 
     l->mouse_force = f_mouse;
 
@@ -564,6 +672,7 @@ Level* Level::LoadLevelWindTest(sf::RenderWindow& window, tgui::GuiSFML& gui)
 
 Level* Level::LoadLevelParticleDemo(sf::RenderWindow& window, tgui::GuiSFML& gui)
 {
+    SpriteSpawner::disable();
     View view(sf::FloatRect(0.f, 0.f, (float) WIDTH, (float) HEIGTH));
 
     // Textures
@@ -601,6 +710,7 @@ Level* Level::LoadLevelParticleDemo(sf::RenderWindow& window, tgui::GuiSFML& gui
 
 Level* Level::LoadLevelPathInterpolDemo(sf::RenderWindow& window, tgui::GuiSFML& gui)
 {
+    SpriteSpawner::disable();
     View view(sf::FloatRect(0.f, 0.f, (float) WIDTH, (float) HEIGTH));
 
     // Textures
