@@ -60,8 +60,8 @@ sf::Vector2f ForceSource::getForce(sf::Vector2f x /*pos*/, float m /*m*/)
                 case Wind:
                 {
                     sf::Vector2f F_base = {10000, 0};
-                    sf::Vector2f F_position_based = {0, ((int)(x.x / 10000) % 2 == 0 ? -2000 : 2000)};
-                    sf::Vector2f F_rand = {-5000 + std::rand() % 10000, -5000 + std::rand() % 5000};
+                    sf::Vector2f F_position_based = {0, (float) ((int)(x.x / 10000) % 2 == 0 ? -2000 : 2000)};
+                    sf::Vector2f F_rand = {(float) (-5000 + std::rand() % 10000), (float)(-5000 + std::rand() % 5000)};
                     return F_base + F_position_based + F_rand; // placeholder
                 }   
                 default:

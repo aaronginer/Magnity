@@ -592,7 +592,7 @@ Level* Level::LoadLevel3(sf::RenderWindow& window, tgui::GuiSFML& gui)
 
     for (int i = 0; i < 10; i++)
     {   
-        sf::Vector2f pos = {std::rand() % WIDTH, std::rand() % HEIGTH};
+        sf::Vector2f pos = {(float) (std::rand() % WIDTH), (float) (std::rand() % HEIGTH)};
         ForceSource* f = new ForceSource(ForceType::Gravity, pos, 20000 + std::rand() % 200000);
         pdyn->addForceSource(f);
     }
@@ -695,7 +695,7 @@ Level* Level::LoadLevel4(sf::RenderWindow& window, tgui::GuiSFML& gui)
 
     for (int i = 0; i < 10; i++)
     {   
-        sf::Vector2f pos = {std::rand() % WIDTH, std::rand() % HEIGTH};
+        sf::Vector2f pos = {(float) (std::rand() % WIDTH), (float) (std::rand() % HEIGTH)};
         ForceSource* f = new ForceSource(ForceType::Gravity, pos, 30000 + std::rand() % 30000);
         pdyn->addForceSource(f);
     }
@@ -748,7 +748,7 @@ Level* Level::LoadLevelParticleDemo(sf::RenderWindow& window, tgui::GuiSFML& gui
 
     for (int i = 0; i < 20; i++)
     {
-        Particle* p = new Particle(*object_texture, {std::rand() % WIDTH, std::rand() % HEIGTH}, {0, 0}, std::rand() % 50000);
+        Particle* p = new Particle(*object_texture, {(float) (std::rand() % WIDTH), (float) (std::rand() % HEIGTH)}, {0, 0}, std::rand() % 50000);
         p->sprite_->setScale({0.5f, 0.5f});
         pdyn->addParticle(p);
         pdyn->addForceSource(p);
@@ -816,4 +816,6 @@ Level* Level::LoadLevel(sf::RenderWindow& window, tgui::GuiSFML& gui, Level* (*l
     current_level = levelToLoad(window, gui);
 
     level_lock.unlock();
+
+    return c;
 }
