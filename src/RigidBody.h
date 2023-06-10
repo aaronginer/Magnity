@@ -67,6 +67,7 @@ class RigidBody {
         int id = 0;
         sf::Image img;
         sf::Texture texture;
+        sf::Texture texture_voronoi;
         std::string nameImg;
         bool visible = true;
         bool disabled = false;

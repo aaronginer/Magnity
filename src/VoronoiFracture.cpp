@@ -19,7 +19,6 @@ VoronoiFracture::VoronoiFracture(RigidBody* rigidBody, sf::Vector3<double> colli
     sf::Image image;
     image.create(rigidBody->body.getSize().x, rigidBody->body.getSize().y, sf::Color::Transparent);
     image = rigidBody->body.getTexture()->copyToImage(); // Set image to the image of the original object
-    this->vornoi_image = image;
 
     sf::Image imgFracture;
     imgFracture.create(image.getSize().x, image.getSize().y, sf::Color::Transparent);
@@ -198,6 +197,71 @@ int VoronoiFracture::getIndexPtn(sf::Vector3<double> vPoint) {
     return -1;
 }
 
+void VoronoiFracture::toggleVoronoiView()
+{
+    if (VoronoiFracture::show_cells)
+    {
+        for (auto it = RigidBody::rigid_bodies->begin(); it != RigidBody::rigid_bodies->end(); it++)
+        {
+            sf::Image image;
+            image.create((*it)->body.getSize().x, (*it)->body.getSize().y, sf::Color::Transparent);
+            VoronoiFracture(*it, (*it)->x).getVoronoiImage(image);
+
+            (*it)->texture_voronoi.loadFromImage(image);
+            (*it)->body.setTexture(&(*it)->texture_voronoi);
+        }
+    }
+    else
+    {
+        for (auto it = RigidBody::rigid_bodies->begin(); it != RigidBody::rigid_bodies->end(); it++)
+        {
+            (*it)->body.setTexture(&(*it)->texture);
+        }
+    }
+}
+
+void VoronoiFracture::getVoronoiImage(sf::Image& voronoi_image)
+{
+    sf::Image img = rigidBody->body.getTexture()->copyToImage();
+    for (int i = 0; i < this->rigidBody->body.getTexture()->getSize().x; i++) {
+        for (int j = 0; j < this->rigidBody->body.getTexture()->getSize().y; j++) {
+            std::pair<sf::Vector3 < double>,
+                    sf::Vector3 < double >> closestPoints = getTwoClosestPoints(sf::Vector3<double>(i, j, 0));
+            float noise = fbm(sf::Vector3<double>(i, j, 0));
+            if(!VoronoiFracture::use_noise) {
+                noise = 1.0f;
+            }
+            double d = isInsideOutside(closestPoints.first, closestPoints.second, sf::Vector3<double>(i + noise, j + noise, 0));
+
+            int idxClosestPtn = vPointsIDX.at(std::pair<int, int>(closestPoints.first.x, closestPoints.first.y));
+            if (d < 0) {
+                // Set the pixel in image_fracture using the corresponding pixel from the array
+                sf::Color c = img.getPixel(i, j);
+                sf::Vector2f diff = {i - closestPoints.first.x, j - closestPoints.first.y};
+                float dis = sqrt(pow(diff.x, 2) + pow(diff.y, 2));
+                if(c.a != NULL) {
+                    if (dis >= 6)
+                    {
+                        sf::Color center_c = this->colors.at(idxClosestPtn);
+                        sf::Color c;
+
+                        float rate = std::clamp((int) dis, 0, 120) / 120.f;
+
+                        c.r = 1-rate * center_c.r;
+                        c.g = 1-rate * center_c.g;
+                        c.b = 1-rate * center_c.b;
+
+                        voronoi_image.setPixel(i, j, c);
+                    }
+                }
+                if(dis < 6) {
+                    voronoi_image.setPixel(i, j, sf::Color::Black);
+                }
+            }
+        }
+    }
+}
+
 void VoronoiFracture::calcualteVoronoiFracture(std::vector<RigidBody*> *insertedBodies) {
     sf::Image img = rigidBody->body.getTexture()->copyToImage();
     for (int i = 0; i < this->rigidBody->body.getTexture()->getSize().x; i++) {
@@ -216,12 +280,6 @@ void VoronoiFracture::calcualteVoronoiFracture(std::vector<RigidBody*> *inserted
                 sf::Color c = img.getPixel(i, j);
                 if(c.a != NULL) {
                     this->rigidBodesImages.at(idxClosestPtn).setPixel(i, j, c);
-                }
-                if(i == closestPoints.first.x && j == closestPoints.first.y) {
-                    this->vornoi_image.setPixel(i, j, sf::Color::Black);
-                }
-                else {
-                    this->vornoi_image.setPixel(i, j, this->colors.at(idxClosestPtn));
                 }
             }
         }
@@ -257,7 +315,7 @@ void VoronoiFracture::calcualteVoronoiFracture(std::vector<RigidBody*> *inserted
         //fracture->torque_vec = sf::Vector3<double>(0,0, rigidBody->torque_vec.z * 0.0001);
         fracture->torque_vec = rigidBody->torque_vec;
         fracture->splitter = true;
-        fracture->nameImg = "img" + std::to_string(idxPtn) + ".png";
+        // fracture->nameImg = "img" + std::to_string(idxPtn) + ".png";
         insertedBodies->push_back(fracture);
         i++;
     }
@@ -322,8 +380,8 @@ float VoronoiFracture::fbm (sf::Vector3<double> st) {
 }
 
 void VoronoiFracture::showVornoiCells() {
-    sf::Texture* texture = new sf::Texture();
-    texture->loadFromImage(this->vornoi_image);
-    this->rigidBody->body.setTexture(texture);
+    // sf::Texture* texture = new sf::Texture();
+    // texture->loadFromImage(this->vornoi_image);
+    // this->rigidBody->body.setTexture(texture);
 }
 

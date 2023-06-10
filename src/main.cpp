@@ -379,7 +379,10 @@ tgui::Panel::Ptr createControlPanel(sf::RenderWindow& window)
     voronoi_display_cells_button->setText("VF: Show Cells");
     voronoi_display_cells_button->setSize(400, 30);
     voronoi_display_cells_button->setPosition(10, 400);
-    voronoi_display_cells_button->onPress.connect([&]() { VoronoiFracture::show_cells = !VoronoiFracture::show_cells; });
+    voronoi_display_cells_button->onPress.connect([&]() { 
+        VoronoiFracture::show_cells = !VoronoiFracture::show_cells; 
+        VoronoiFracture::toggleVoronoiView();
+    });
 
     panel->add(voronoi_display_cells_button);
 

@@ -957,6 +957,7 @@ Level* Level::LoadLevelVoronoiDemo(sf::RenderWindow& window, tgui::GuiSFML& gui)
     l->wall_area_ = wa;
     l->background_color_ = sf::Color::White;
 
+
     window.setView(view);
     return l;
 }

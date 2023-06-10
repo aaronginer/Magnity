@@ -26,10 +26,11 @@ public:
     void showVornoiCells();
     float noise(sf::Vector3<double> st);
     float fbm (sf::Vector3<double> st);
+    void getVoronoiImage(sf::Image& voronoi_image);
     std::vector<sf::Color> colors;
-    sf::Image vornoi_image;
     static bool use_noise;
     static bool show_cells;
+    static void toggleVoronoiView();
 
 private:
 
