@@ -14,6 +14,7 @@
 
 #include "ParticleDynamics.h"
 #include "Level.h"
+#include "VoronoiFracture.h"
 
 using namespace std::chrono;
 
@@ -354,6 +355,33 @@ tgui::Panel::Ptr createControlPanel(sf::RenderWindow& window)
     showVelocityButton->onPress.connect([&]() { RigidBody::draw_vectors_ = !RigidBody::draw_vectors_; });
 
     panel->add(showVelocityButton);
+
+    tgui::Label::Ptr voronoi_checkbox_label = tgui::Label::create();
+    voronoi_checkbox_label->setText("VF Noise: ");
+    voronoi_checkbox_label->setPosition(10, 370);
+    voronoi_checkbox_label->setTextSize(16);
+
+    tgui::CheckBox::Ptr voronoi_checkbox = tgui::CheckBox::create();
+    voronoi_checkbox->setChecked(false);
+    voronoi_checkbox->setPosition(100, 370);
+    voronoi_checkbox->onCheck([&](){
+        VoronoiFracture::use_noise = true;
+    });
+    voronoi_checkbox->onUncheck([&](){
+        VoronoiFracture::use_noise = false;
+    });
+
+    panel->add(voronoi_checkbox);
+    panel->add(voronoi_checkbox_label);
+
+
+    tgui::Button::Ptr voronoi_display_cells_button = tgui::Button::create();
+    voronoi_display_cells_button->setText("VF: Show Cells");
+    voronoi_display_cells_button->setSize(400, 30);
+    voronoi_display_cells_button->setPosition(10, 400);
+    voronoi_display_cells_button->onPress.connect([&]() { VoronoiFracture::show_cells = !VoronoiFracture::show_cells; });
+
+    panel->add(voronoi_display_cells_button);
 
     // panel sizing
     sf::Vector2f panelSize(0, 0);

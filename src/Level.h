@@ -15,6 +15,7 @@
 
 class Level {
     public:
+        std::vector<Spline*> bg_splines_;
         std::vector<Spline*> splines_;
         std::vector<ParticleDynamics*> particle_dynamics_;
         std::vector<RigidBody*> rigid_bodies_;

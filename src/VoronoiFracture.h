@@ -28,7 +28,8 @@ public:
     float fbm (sf::Vector3<double> st);
     std::vector<sf::Color> colors;
     sf::Image vornoi_image;
-    bool use_noise = false;
+    static bool use_noise;
+    static bool show_cells;
 
 private:
 

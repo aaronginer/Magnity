@@ -41,7 +41,6 @@ RigidBody::RigidBody(double mass, double density, unsigned int type, double widt
     this->body.setSize({(float)width, (float)height});
     this->body.setTexture(&texture);
     this->x = sf::Vector3<double>(posX, posY, 0.0f);
-    printf("%f %f\n", this->x.x, this->x.y);
     this->body.setPosition((float)posX, (float)posY);
     this->P = sf::Vector3<double>(0,0,0);
     this->L = 0.0;
@@ -287,7 +286,6 @@ void RigidBody::checkForCollisions(std::vector<RigidBody*> *rigid_bodies, std::v
             if (collision) {
                 int ObstacleX = rb2->x.x;
                 int ObstacleY = rb2->x.y;
-                printf("before if: %f %f\n", rb2->x.x, rb2->x.y);
                 if(/* rb2->fixed && */rb2->type == 2 || rb2->type == 3) {
                     double left_cornerX = rigid_bodies->at(j)->x.x - (rigid_bodies->at(j)->width / 2.0f);
                     double left_cornerY = rigid_bodies->at(j)->x.y - (rigid_bodies->at(j)->height / 2.0f);
@@ -344,8 +342,6 @@ void RigidBody::checkForCollisions(std::vector<RigidBody*> *rigid_bodies, std::v
                 }
                 if (rb2->type == 3)
                 {
-                    printf("after if: %f %f\n", rb2->x.x, rb2->x.y);
-                    fflush(stdout);
                     VoronoiFracture(rb1, collision_point).calcualteVoronoiFracture(insertedBodies);
                     if (in_game)
                     {

@@ -8,6 +8,9 @@
 int id = 0;
 extern Level* current_level;
 
+bool VoronoiFracture::use_noise = false;
+bool VoronoiFracture::show_cells = false;
+
 VoronoiFracture::VoronoiFracture(RigidBody* rigidBody, sf::Vector3<double> collisionPoint) {
     this->rigidBody = rigidBody;
     computeVoronoiPoints(collisionPoint);
@@ -202,10 +205,10 @@ void VoronoiFracture::calcualteVoronoiFracture(std::vector<RigidBody*> *inserted
             std::pair<sf::Vector3 < double>,
                     sf::Vector3 < double >> closestPoints = getTwoClosestPoints(sf::Vector3<double>(i, j, 0));
             float noise = fbm(sf::Vector3<double>(i, j, 0));
-            if(!this->use_noise) {
+            if(!VoronoiFracture::use_noise) {
                 noise = 1.0f;
             }
-            double d = isInsideOutside(closestPoints.first, closestPoints.second, sf::Vector3<double>(i * noise, j * noise, 0));
+            double d = isInsideOutside(closestPoints.first, closestPoints.second, sf::Vector3<double>(i + noise, j + noise, 0));
 
             int idxClosestPtn = vPointsIDX.at(std::pair<int, int>(closestPoints.first.x, closestPoints.first.y));
             if (d < 0) {

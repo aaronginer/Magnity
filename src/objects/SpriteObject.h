@@ -6,8 +6,15 @@
 class SpriteObject : public GameObject {
 public:
     sf::Sprite sprite_;
+    sf::Vector2f prev_position_ = {0, 0};
     int origin_;
     bool destroy_if_too_far_ = false;
+
+    sf::Time sampling_rate_ = sf::seconds(0.2f);
+    sf::Time current_time_ = sf::seconds(0.0f);
+    sf::Clock clock_;
+
+    bool flipping_enabled_ = false;
 
     SpriteObject(sf::Texture& texture, sf::Vector2f position, int origin=0);
 

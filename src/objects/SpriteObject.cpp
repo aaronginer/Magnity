@@ -72,6 +72,22 @@ void SpriteObject::draw(sf::RenderWindow& window)
 {
     if (!this->active_) return;
     
+    if (flipping_enabled_)
+    {
+        current_time_ += clock_.restart();
+        if (current_time_ > sampling_rate_)
+        {
+            bool move_left = prev_position_.x > this->position_.x;
+            float scale_x = scale_.x;
+            if (scale_x > 0 && move_left) scale_x = -scale_x;
+            else if (scale_x < 0 && !move_left) scale_x = -scale_x;
+
+            setScale({scale_x, scale_.y});
+            prev_position_ = this->position_;
+            current_time_ = sf::seconds(0);
+        }
+    }
+        
     window.draw(this->sprite_);
 }
 

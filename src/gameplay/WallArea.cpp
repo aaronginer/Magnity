@@ -39,7 +39,6 @@ void WallArea::load(std::string file_path)
             RigidBody* wall_body = new RigidBody(10, 2.5, 3, sx, sy, *t, false,
                                         px + sx/2, py + sy/2, RigidBody::rigid_bodies->size());
             wall_body->visible = false;
-            printf("SPAWNED FIXED: %d\n", wall_body->id);
             RigidBody::rigid_bodies->push_back(wall_body);
 
             sf::RectangleShape r({sx, sy});
@@ -59,7 +58,6 @@ void WallArea::load(std::string file_path)
             RigidBody* wall_body = new RigidBody(10, 2.5, 2, sx, sy, *t, false,
                                         px + sx/2, py + sy/2, RigidBody::rigid_bodies->size());
             wall_body->visible = false;
-            printf("SPAWNED BOUNCY: %d\n", wall_body->id);
             RigidBody::rigid_bodies->push_back(wall_body);
 
             sf::RectangleShape r({sx, sy});

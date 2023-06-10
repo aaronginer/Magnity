@@ -34,6 +34,13 @@ void Level::destroy(sf::RenderWindow& window)
         delete s;
     }
 
+    for (Spline* s : this->bg_splines_)
+    {
+        if (s == target_area_) continue;
+        delete s;
+    }
+
+
     auto pdyn_iter = this->particle_dynamics_.begin();
     for (; pdyn_iter != this->particle_dynamics_.end(); )
     {
@@ -92,6 +99,11 @@ void Level::update(float time_delta)
         s->update(time_delta);
     }
 
+    for (Spline* s : this->bg_splines_)
+    {
+        s->update(time_delta);
+    }
+
     for (ParticleDynamics* p : this->particle_dynamics_)
     {
         p->update(time_delta);
@@ -140,6 +152,14 @@ void Level::draw(sf::RenderWindow& window, float delta_time)
     for (GameObject* g : this->game_objects_)
     {
         g->draw(window);
+    }
+
+    for (Spline* s : this->bg_splines_)
+    {
+        s->drawCurve(window);
+        s->drawArcSamples(window);
+        s->drawControlPoints(window);
+        if (s != target_area_) s->drawObject(window);
     }
 
     if (magnet_area_ != nullptr)
@@ -378,12 +398,24 @@ Level* Level::LoadLevel1(sf::RenderWindow& window, tgui::GuiSFML& gui)
     target_texture->loadFromFile("res/target.png");
     sf::Texture* bg_texture = new sf::Texture();
     bg_texture->loadFromFile("res/spring.jpg");
+    sf::Texture* butterfly_texture = new sf::Texture();
+    butterfly_texture->loadFromFile("res/butterfly.png");
 
     // background
     SpriteObject* background = new SpriteObject(*bg_texture, view.getCenter(), 0);
     background->setScale({0.5f, 0.5f});
 
     // Splines
+    Spline* but1 = new Spline({{-100, 400}, {0, 320}, {300, 360}, {700, 440}, {1200, 400}, {1500, 200}}, *butterfly_texture, true);
+    but1->flipping_enabled_ = true;
+    but1->setOrigin(0);
+    but1->setScale({0.15f, 0.15f});
+
+    Spline* but2 = new Spline({{-100, 300}, {0, 200}, {300, 300}, {700, 540}, {1200, 200}, {1500, 100}}, *butterfly_texture, true);
+    but2->flipping_enabled_ = true;
+    but2->setOrigin(0);
+    but2->setScale({0.15f, 0.15f});
+    Spline::traversal_speed_ = 10;
 
     // ParticleDynamics
 
@@ -430,8 +462,11 @@ Level* Level::LoadLevel1(sf::RenderWindow& window, tgui::GuiSFML& gui)
     // create level
     Level* l = new Level("Level1");
     l->loaded_textures_.push_back(object_texture);
+    l->loaded_textures_.push_back(butterfly_texture);
     l->loaded_textures_.push_back(target_texture);
     l->loaded_textures_.push_back(bg_texture);
+    l->bg_splines_.push_back(but1);
+    l->bg_splines_.push_back(but2);
     l->game_objects_.push_back(background);
     l->magnets_.push_back(m1);
     l->magnets_.push_back(m2);
@@ -464,12 +499,24 @@ Level* Level::LoadLevel2(sf::RenderWindow& window, tgui::GuiSFML& gui)
     target_texture->loadFromFile("res/target.png");
     sf::Texture* bg_texture = new sf::Texture();
     bg_texture->loadFromFile("res/summer.jpg");
+    sf::Texture* bird_texture = new sf::Texture();
+    bird_texture->loadFromFile("res/bird.png");
 
     // background
     SpriteObject* background = new SpriteObject(*bg_texture, view.getCenter(), 0);
     background->setScale({0.5f, 0.5f});
 
     // Splines
+    Spline* bird1 = new Spline({{-100, 400}, {0, 320}, {300, 360}, {700, 440}, {1200, 400}, {1500, 200}}, *bird_texture, true);
+    bird1->flipping_enabled_ = true;
+    bird1->setOrigin(0);
+    bird1->setScale({0.15f, 0.15f});
+
+    Spline* bird2 = new Spline({{-100, 300}, {0, 200}, {300, 300}, {700, 540}, {1200, 200}, {1500, 100}}, *bird_texture, true);
+    bird2->flipping_enabled_ = true;
+    bird2->setOrigin(0);
+    bird2->setScale({0.15f, 0.15f});
+    Spline::traversal_speed_ = 10;
 
     // ParticleDynamics
 
@@ -517,9 +564,12 @@ Level* Level::LoadLevel2(sf::RenderWindow& window, tgui::GuiSFML& gui)
     // create level
     Level* l = new Level("Level2");
     l->splines_.push_back(ta);
+    l->bg_splines_.push_back(bird1);
+    l->bg_splines_.push_back(bird2);
     l->loaded_textures_.push_back(object_texture);
     l->loaded_textures_.push_back(target_texture);
     l->loaded_textures_.push_back(bg_texture);
+    l->loaded_textures_.push_back(bird_texture);
     l->magnets_.push_back(m1);
     l->magnets_.push_back(m2);
     l->game_objects_.push_back(background);
