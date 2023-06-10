@@ -574,7 +574,7 @@ Level* Level::LoadLevel3(sf::RenderWindow& window, tgui::GuiSFML& gui)
 
     // ParticleDynamics
     ParticleDynamics* pdyn_o = new ParticleDynamics(true);
-    Particle* p = new Particle(*object_texture, {WIDTH/2, HEIGTH/2}, {0, 0}, 10);
+    Particle* p = new Particle(*object_texture, {WIDTH/2.f, HEIGTH/2.f}, {0, 0}, 10);
     p->sprite_->setScale({1, 1});
     pdyn_o->addParticle(p);
     ForceSource* f_m = new ForceSource(ForceType::Gravity, {0, 0}, 0);
