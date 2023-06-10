@@ -40,3 +40,6 @@ Lost:
 
 Wind:
     https://pixabay.com/de/sound-effects/howling-winter-storm-ambient-sounds-6756/
+
+Spring: 
+    https://pixabay.com/de/sound-effects/evening-birds-singing-in-spring-background-sounds-of-nature-146388/

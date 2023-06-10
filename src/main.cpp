@@ -3,10 +3,10 @@
 
 #include <thread>
 #include <chrono>
-#include<unistd.h> 
+#include <unistd.h> 
 #include <assert.h>
 #include "PathInterpol.h"
-
+#include "mutex"
 
 #include <iostream>
 
@@ -46,6 +46,7 @@ sf::Time time_per_frame = sf::seconds(1.0f / 60);
 
 bool control_panel_visible = false;
 Level* current_level = nullptr;
+std::mutex level_lock;
 Level* (*currentLevelFunction)(sf::RenderWindow& window, tgui::GuiSFML& gui);
 
 bool game_paused = false;
@@ -77,8 +78,6 @@ int main()
     Clock clock;
     while ((*mainWindow).isOpen())
     {
-        assert(current_level);
-
         deltaTime = clock.restart();
         animation_time_passed += deltaTime;
         draw_time_passed += deltaTime;
@@ -124,6 +123,9 @@ int main()
         current_level->handleInstantKeyInput(deltaTime.asSeconds());
         current_level->updateMouseParticlePosition(mouse_pos);
         current_level->handleDrag(mouse_pos);
+
+
+        if (current_level == nullptr) continue;
 
         // animation updates
         if (animation_time_passed >= time_per_animation_update)
@@ -372,6 +374,22 @@ tgui::Panel::Ptr createPausePanel(sf::RenderWindow& window, tgui::Gui& gui)
     });
 
     panel->add(controls_button);
+
+
+    auto restart_level_button = tgui::Button::create();
+    restart_level_button->setText("Restart Level");
+    restart_level_button->setSize(100, 30);
+    restart_level_button->setOrigin(0.5f, 0.5f);
+    restart_level_button->setPosition({panel->getSize().x/2, panel->getSize().y/2+100});
+    restart_level_button->onClick([&window, &gui, &panel](){
+        Level::LoadLevel(window, gui, currentLevelFunction);
+        game_paused = false;
+        won = false;
+        lost = false;
+    });
+    
+    panel->add(restart_level_button);
+
     panel->add(createMenuButton(window, gui, panel));
 
     updatePausePanelSize(panel, window);
@@ -419,10 +437,7 @@ tgui::Panel::Ptr createLostPanel(sf::RenderWindow& window, tgui::Gui& gui)
     restart_level_button->setOrigin(0.5f, 0.5f);
     restart_level_button->setPosition({panel->getSize().x/2, panel->getSize().y/2+100});
     restart_level_button->onClick([&window, &gui, &panel](){
-        Level* c = current_level;
-        c->destroy(window);
-        gui.remove(c->level_panel_);
-        current_level = currentLevelFunction(window, gui);
+        Level::LoadLevel(window, gui, currentLevelFunction);
         game_paused = false;
         won = false;
         lost = false;
@@ -457,10 +472,7 @@ tgui::Button::Ptr createMenuButton(sf::RenderWindow& window, tgui::Gui& gui, tgu
     back_to_menu_button->setOrigin(0.5f, 0.5f);
     back_to_menu_button->setPosition({panel->getSize().x/2, panel->getSize().y/2});
     back_to_menu_button->onClick([&window, &gui, &panel](){
-        Level* c = current_level;
-        c->destroy(window);
-        gui.remove(c->level_panel_);
-        current_level = Level::LoadLevel0(window, gui);
+        Level::LoadLevel(window, gui, &Level::LoadLevel0);
         game_paused = false;
         won = false;
         lost = false;

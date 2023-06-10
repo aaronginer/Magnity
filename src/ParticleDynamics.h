@@ -102,6 +102,7 @@ public:
     static bool rk4;
 
     float time_since_last_recording_ = 0.0f;
+    bool spawner_enabled_ = false;
 
     ParticleDynamics(bool rk4) { this->rk4 = rk4; }
 

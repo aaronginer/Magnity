@@ -37,7 +37,7 @@ void WallArea::load(std::string file_path)
             sf::RectangleShape r({sx, sy});
             r.setPosition(px, py);
             r.setPosition(px, py);
-            r.setFillColor(sf::Color(100, 100, 100, 255));
+            r.setFillColor(sf::Color(100, 100, 100, 150));
             r.setOutlineColor(sf::Color::Black);
             r.setOutlineThickness(2);
 
@@ -51,7 +51,7 @@ void WallArea::load(std::string file_path)
             sf::RectangleShape r({sx, sy});
             r.setPosition(px, py);
             r.setPosition(px, py);
-            r.setFillColor(sf::Color(100, 100, 100, 255));
+            r.setFillColor(sf::Color(255, 50, 50, 150));
             r.setOutlineColor(sf::Color::Black);
             r.setOutlineThickness(2);
 

@@ -58,6 +58,7 @@ class Level {
 
         void loadFromFile(std::string file_name);
 
+        static Level* LoadLevel(sf::RenderWindow& window, tgui::GuiSFML& gui, Level* (*levelToLoad)(sf::RenderWindow& window, tgui::GuiSFML& gui));
         static Level* LoadLevel0(sf::RenderWindow& window, tgui::GuiSFML& gui);
         static Level* LoadLevel1(sf::RenderWindow& window, tgui::GuiSFML& gui);
         static Level* LoadLevel2(sf::RenderWindow& window, tgui::GuiSFML& gui);

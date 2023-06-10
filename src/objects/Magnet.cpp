@@ -2,7 +2,7 @@
 #include "cmath"
 #define M_PI 3.14159265358979323846
 
-Magnet::Magnet(MagnetKeySet key_set, sf::Vector2f position, int player)
+Magnet::Magnet(MagnetKeySet key_set, sf::Vector2f position, int player, sf::Vector2f scale)
 {
     this->key_set_ = key_set;
 
@@ -32,11 +32,11 @@ Magnet::Magnet(MagnetKeySet key_set, sf::Vector2f position, int player)
     this->levels_[2]->active_ = false;
     this->magnet_inactive_->active_ = false;
 
-    this->magnet_active_->setScale({0.1f, 0.1f});
-    this->magnet_inactive_->setScale({0.1f, 0.1f});
-    this->levels_[0]->setScale({0.1f, 0.1f});
-    this->levels_[1]->setScale({0.1f, 0.1f});
-    this->levels_[2]->setScale({0.1f, 0.1f});
+    this->magnet_active_->setScale(scale);
+    this->magnet_inactive_->setScale(scale);
+    this->levels_[0]->setScale(scale);
+    this->levels_[1]->setScale(scale);
+    this->levels_[2]->setScale(scale);
 
     this->player_ = player;
 }

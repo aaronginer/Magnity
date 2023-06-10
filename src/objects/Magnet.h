@@ -23,7 +23,7 @@ public:
     int level_ = 1;
     MagnetKeySet key_set_;
 
-    Magnet(MagnetKeySet key_set, sf::Vector2f position, int player);
+    Magnet(MagnetKeySet key_set, sf::Vector2f position, int player, sf::Vector2f scale={0.1f, 0.1f});
     ~Magnet();
 
     std::vector<sf::Texture*> textures_;

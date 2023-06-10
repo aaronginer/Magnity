@@ -1,9 +1,15 @@
 #include "ParticleDynamics.h"
 #include "cmath"
 #include "algorithm"
+#include "background/SpriteSpawner.h"
+#include "atomic"
+#include "mutex"
+#include "assert.h"
 
 #define M_PI 3.14159265358979323846
 #define PIXELS_PER_UNIT 10000.f
+
+extern std::mutex level_lock;
 
 // static float distance(sf::Vector2f v1, sf::Vector2f v2)
 // {
@@ -80,7 +86,7 @@ void ForceSource::draw(sf::RenderWindow& window)
 
     sf::CircleShape c;
     c.setPosition(this->x_);
-    c.setFillColor(sf::Color(255*this->m_/400000.f, 0, 0));
+    c.setFillColor(sf::Color::White);
     c.setOrigin({5,5});
     c.setRadius(5);
     window.draw(c);
@@ -203,6 +209,9 @@ void ParticleDynamics::Euler(float deltaT)
 
 void ParticleDynamics::update(float deltaT)
 {
+    // spaws particles at specified rate -> not part of ParticleDynamics implementation
+    if (spawner_enabled_) SpriteSpawner::instance()->spawn(this);
+
     if (ParticleDynamics::rk4)
     {
         RK4(deltaT);
@@ -232,16 +241,23 @@ void ParticleDynamics::draw(sf::RenderWindow& window, float delta_time)
         }
     }
     
+    assert(level_lock.try_lock() == false);
     for (auto iter = this->particles.begin(); iter != this->particles.end();)
     {
-        (*iter)->sprite_->draw(window);
-
         // delete particle if feature enabled and if too far away from screen center
         if ((*iter)->sprite_->checkDestroy(window))
         {
+            auto force_iter = std::find(force_sources.begin(), force_sources.end(), *iter);
+            if (force_iter != force_sources.end()) 
+            {
+                force_sources.erase(force_iter);
+            }
+
+            delete *iter;
             iter = this->particles.erase(iter);
             continue;
         }
+        (*iter)->sprite_->draw(window);
         iter++;
     }
 }
