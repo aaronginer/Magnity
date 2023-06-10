@@ -31,6 +31,7 @@ class Spline
     public:
         std::vector<sf::Vector2f> ctrl_points_;
         std::vector<SplineSegment> segments_;
+
         float traversal_speed_ = 4.f;
         float time_;
         sf::Vector2f current_pos_;
@@ -39,12 +40,14 @@ class Spline
         std::vector<ArcLengthTableEntry> arc_length_table_;
 
         sf::Texture ctrl_texture_;
+        sf::Texture vector_texture_;
         std::vector<sf::Sprite> ctrl_sprites_;
 
         std::mutex mutex_;
 
         bool draw_curve_ = false;
         bool draw_ctrl_and_arc_ = false;
+        bool draw_vectors_ = false;
 
         int easing_option_ = 0;
 

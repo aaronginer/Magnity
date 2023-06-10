@@ -158,6 +158,13 @@ void createPathInterpolationPanel(tgui::Panel::Ptr panel, sf::RenderWindow& wind
     drawControlsButton->setPosition(10, 140);
     drawControlsButton->onPress.connect([&]() { s.draw_ctrl_and_arc_ = !s.draw_ctrl_and_arc_; });
 
+    // Create the Show momentum / velocity vectors
+    tgui::Button::Ptr showVelocityButton = tgui::Button::create();
+    drawControlsButton->setText("Show Momentum and Velocity vectors");
+    drawControlsButton->setSize(400, 30);
+    drawControlsButton->setPosition(10, 140);
+    drawControlsButton->onPress.connect([&]() { s.draw_vectors_ = !s.draw_vectors_; });
+
     panel->add(drawControlsButton);
 
     // Create the Easing dropdown menu

@@ -154,6 +154,7 @@ void Spline::drawArcSamples()
     }
 }
 
+
 #define DRAW_CURVE_SAMPLES_PER_UNIT 5
 void Spline::drawCurve()
 {

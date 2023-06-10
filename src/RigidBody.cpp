@@ -6,7 +6,7 @@
 
 //array of rigid bodies
 std::vector<RigidBody> *rigid_bodies_new = new std::vector<RigidBody>;
-
+//sf::Texture vector_texture;
 
 //TODO: see forum for Rigid Body
 
@@ -45,7 +45,8 @@ RigidBody::RigidBody(double mass, double density, unsigned int type, double widt
     this->w = 0.0f;
     this->collision_found = false;
     this->fixed = fixed;
-
+    //vector_texture.loadFromFile("Users/laurapessl/Desktop/Magnity/res/arrow.png");
+    //this->momentum_vector.setTexture(vector_texture);
 }
 
 void RigidBody::DisplayBodies(sf::RenderWindow &window, std::vector<RigidBody*> *rigid_bodies) {
