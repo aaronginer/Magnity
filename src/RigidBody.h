@@ -23,7 +23,7 @@ class RigidBody {
         static std::vector<RigidBody*>* rigid_bodies;
         static bool draw_vectors_;
 
-        RigidBody(double mass, double density, unsigned int type, double width, double height, const sf::Texture& texture,
+        RigidBody(double mass, double density, unsigned int type, double width, double height, sf::Texture& texture,
                     bool fixed, double posX, double posY, int id);
 
         static double calcMagnitude(sf::Vector3<double> vec);
@@ -66,7 +66,7 @@ class RigidBody {
         bool splitter = false;
         int id = 0;
         sf::Image img;
-        sf::Texture texture;
+        sf::Texture* texture;
         sf::Texture texture_voronoi;
         std::string nameImg;
         bool visible = true;

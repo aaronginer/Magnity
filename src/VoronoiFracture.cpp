@@ -119,6 +119,7 @@ void VoronoiFracture::computeVoronoiPoints(sf::Vector3<double> entryPoint) {
         //this->voronoiPoints.insert({id, point});
         this->voronoiPoints.push_back({x,y});
         vPoints.push_back({x,y,0});
+        printf("Inserting: %d %d\n", x, y);
         vPointsIDX.insert({std::pair<int,int>(x,y), i});
         id++;
     }
@@ -133,6 +134,7 @@ void VoronoiFracture::computeVoronoiPoints(sf::Vector3<double> entryPoint) {
     this->voronoiPoints.push_back({x,y});
     vPoints.push_back({x,y,0});
     vPointsIDX.insert({std::pair<int,int>(x,y), 4});
+    printf("Inserting: %d %d\n", x, y);
     id++;
 
     x = distrGeneral(genGeneral);
@@ -140,6 +142,7 @@ void VoronoiFracture::computeVoronoiPoints(sf::Vector3<double> entryPoint) {
     vPoints.push_back({x,y,0});
     this->voronoiPoints.push_back({x,y});
     vPointsIDX.insert({std::pair<int,int>(x,y), 5});
+    printf("Inserting: %d %d\n", x, y);
 }
 
 double VoronoiFracture::isInsideOutside(sf::Vector3<double> vPa, sf::Vector3<double> vPb, sf::Vector3<double> voxel) {
@@ -202,7 +205,9 @@ void VoronoiFracture::toggleVoronoiView()
     if (VoronoiFracture::show_cells)
     {
         for (auto it = RigidBody::rigid_bodies->begin(); it != RigidBody::rigid_bodies->end(); it++)
-        {
+        {   
+            if ((*it)->disabled || !(*it)->visible || (*it)->splitter) continue;
+
             sf::Image image;
             image.create((*it)->body.getSize().x, (*it)->body.getSize().y, sf::Color::Transparent);
             VoronoiFracture(*it, (*it)->x).getVoronoiImage(image);
@@ -215,7 +220,7 @@ void VoronoiFracture::toggleVoronoiView()
     {
         for (auto it = RigidBody::rigid_bodies->begin(); it != RigidBody::rigid_bodies->end(); it++)
         {
-            (*it)->body.setTexture(&(*it)->texture);
+            (*it)->body.setTexture((*it)->texture);
         }
     }
 }
@@ -232,8 +237,11 @@ void VoronoiFracture::getVoronoiImage(sf::Image& voronoi_image)
                 noise = 1.0f;
             }
             double d = isInsideOutside(closestPoints.first, closestPoints.second, sf::Vector3<double>(i + noise, j + noise, 0));
+            
+            auto it = vPointsIDX.find(std::pair<int, int>(closestPoints.first.x, closestPoints.first.y));
+            if (it == vPointsIDX.end()) continue;
 
-            int idxClosestPtn = vPointsIDX.at(std::pair<int, int>(closestPoints.first.x, closestPoints.first.y));
+            int idxClosestPtn = (*it).second;
             if (d < 0) {
                 // Set the pixel in image_fracture using the corresponding pixel from the array
                 sf::Color c = img.getPixel(i, j);

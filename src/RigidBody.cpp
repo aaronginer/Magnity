@@ -15,7 +15,7 @@ extern bool lost;
 extern bool game_paused;
 extern bool in_game;
 
-RigidBody::RigidBody(double mass, double density, unsigned int type, double width, double height, const sf::Texture& texture,
+RigidBody::RigidBody(double mass, double density, unsigned int type, double width, double height, sf::Texture& texture,
                      bool fixed, double posX, double posY, int id) {
     this->type = type;
     this->id = id;
@@ -48,6 +48,7 @@ RigidBody::RigidBody(double mass, double density, unsigned int type, double widt
     this->w = 0.0f;
     this->collision_found = false;
     this->fixed = fixed;
+    this->texture = &texture;
     //vector_texture.loadFromFile("Users/laurapessl/Desktop/Magnity/res/arrow.png");
     //this->momentum_vector.setTexture(vector_texture);
 }
