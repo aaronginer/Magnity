@@ -1,5 +1,6 @@
 #include "TGUI/TGUI.hpp"
 #include "SFML/Graphics.hpp"
+#include <SFML/Audio.hpp>
 
 #include "PathInterpol.h"
 // #include "RigidBody.h"
@@ -35,6 +36,10 @@ class Level {
 
         std::string name;
 
+        sf::Music background_music_;
+        sf::Music level_complete_sound_;
+        sf::Music level_failed_sound_;
+
         Level(std::string name);
 
         void destroy(sf::RenderWindow& window);
@@ -60,7 +65,6 @@ class Level {
         static Level* LoadLevel4(sf::RenderWindow& window, tgui::GuiSFML& gui);
         static Level* LoadLevelParticleDemo(sf::RenderWindow& window, tgui::GuiSFML& gui);
         static Level* LoadLevelPathInterpolDemo(sf::RenderWindow& window, tgui::GuiSFML& gui);
-        static Level* LoadLevelWindTest(sf::RenderWindow& window, tgui::GuiSFML& gui);
 };
 
 

@@ -34,7 +34,6 @@ void updatePausePanelSize(tgui::Panel::Ptr panel, sf::RenderWindow& window);
 
 sf::RenderWindow *mainWindow;
 tgui::Panel::Ptr control_panel;
-tgui::Button::Ptr control_button;
 tgui::Panel::Ptr pause_panel;
 tgui::Panel::Ptr won_panel;
 tgui::Panel::Ptr lost_panel;
@@ -62,12 +61,10 @@ int main()
     tgui::GuiSFML gui(*mainWindow);
 
     control_panel = createControlPanel(*mainWindow);
-    control_button = createControlsButton();
     pause_panel = createPausePanel(*mainWindow, gui);
     lost_panel = createLostPanel(*mainWindow, gui);
     won_panel = createWonPanel(*mainWindow, gui);
     gui.add(control_panel);
-    gui.add(control_button);
     gui.add(pause_panel);
     gui.add(won_panel);
     gui.add(lost_panel);
@@ -147,7 +144,6 @@ int main()
             pause_panel->setVisible(game_paused && !(won || lost));
             won_panel->setVisible(won);
             lost_panel->setVisible(lost);
-            control_button->setVisible(current_level->name.compare("Level0") != 0);
             gui.draw();
             (*mainWindow).display();
 
@@ -366,6 +362,16 @@ tgui::Panel::Ptr createPausePanel(sf::RenderWindow& window, tgui::Gui& gui)
     panel->getRenderer()->setBackgroundColor(sf::Color(50, 50, 50, 128));
     panel->setSize({window.getSize().x, window.getSize().y});
 
+    auto controls_button = tgui::Button::create();
+    controls_button->setText("Toggle Controls Panel");
+    controls_button->setSize(200, 30);
+    controls_button->setOrigin(0.5f, 0.5f);
+    controls_button->setPosition({panel->getSize().x/2, panel->getSize().y/2-100});
+    controls_button->onClick([&window, &gui, &panel](){
+        control_panel_visible = !control_panel_visible;
+    });
+
+    panel->add(controls_button);
     panel->add(createMenuButton(window, gui, panel));
 
     updatePausePanelSize(panel, window);
@@ -442,23 +448,6 @@ void updatePausePanelSize(tgui::Panel::Ptr panel, sf::RenderWindow& window)
     panel->setSize({window.getSize().x, window.getSize().y});
 }
 
-// creates the control button that toggles the controls gui
-tgui::Button::Ptr createControlsButton()
-{
-     // Create the toggle button
-    auto toggle_button = tgui::Button::create();
-    toggle_button->setText("SaA Controls");
-    toggle_button->setSize(100, 30);
-    toggle_button->setPosition(10, 10);
-
-    // Connect the button to the function that will toggle the GUI
-    toggle_button->onClick.connect([&](){
-        control_panel_visible = !control_panel_visible;
-    });
-
-    return toggle_button;
-}
-
 // creates a back to menu button
 tgui::Button::Ptr createMenuButton(sf::RenderWindow& window, tgui::Gui& gui, tgui::Panel::Ptr panel)
 {
@@ -475,6 +464,7 @@ tgui::Button::Ptr createMenuButton(sf::RenderWindow& window, tgui::Gui& gui, tgu
         game_paused = false;
         won = false;
         lost = false;
+        control_panel_visible = false;
     });
 
     return back_to_menu_button;

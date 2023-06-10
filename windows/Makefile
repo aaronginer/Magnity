@@ -3,7 +3,7 @@ CC = g++
 CFLAGS = -std=c++17 -Wall -I../winlib/SFML/SFML-2.5.1/include -I../winlib/TGUI/TGUI-0.9/include
 
 # SFML libraries
-SFML_LIBS = -lsfml-graphics -lsfml-window -lsfml-system
+SFML_LIBS = -lsfml-graphics -lsfml-window -lsfml-audio -lsfml-system
 
 # TGUI libraries
 TGUI_LIBS = -ltgui

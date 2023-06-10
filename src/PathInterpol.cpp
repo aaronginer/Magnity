@@ -83,7 +83,7 @@ Spline::Spline(std::vector<sf::Vector2f> ctrl_points, sf::Texture& texture, bool
         this->ctrl_points_.push_back(this->ctrl_points_[2]);
     }
 
-    this->sprite_.setScale({0.01f, 0.01f});
+    // this->sprite_.setScale({0.01f, 0.01f});
 
     ctrl_texture_.loadFromFile("res/control_point.png");
     for (size_t i = 0; i < this->ctrl_points_.size(); i++)

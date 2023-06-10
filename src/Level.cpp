@@ -15,6 +15,8 @@ extern bool game_paused;
 Level::Level(std::string name)
 {
     this->name = name;
+    this->level_complete_sound_.openFromFile("res/audio/level_complete.wav");
+    this->level_failed_sound_.openFromFile("res/audio/level_failed.wav");
 }
 
 void Level::destroy(sf::RenderWindow& window)
@@ -94,6 +96,7 @@ void Level::update(float time_delta)
     {
         if (target_area_->contains(object_->getPosition()))
         {
+            level_complete_sound_.play();
             won = true;
             game_paused = true;
         }
@@ -101,6 +104,7 @@ void Level::update(float time_delta)
         sf::Vector2f v = sf::Vector2f(WIDTH/2, HEIGTH/2) - object_->getPosition();
         if (sqrt(pow(v.x, 2) + pow(v.y, 2)) >= 2000)
         {
+            level_failed_sound_.play();
             lost = true;
             game_paused = true;
         }
@@ -287,7 +291,7 @@ Level* Level::LoadLevel0(sf::RenderWindow& window, tgui::GuiSFML& gui)
     pi_demo_button->setText("PI Demo");
     pi_demo_button->setSize(100, 30);
     pi_demo_button->setOrigin(0.5f, 0.5f);
-    pi_demo_button->setPosition({panel->getPosition().x-300, panel->getPosition().y+150});
+    pi_demo_button->setPosition({panel->getPosition().x-400, panel->getPosition().y+150});
     pi_demo_button->onClick([&window, &gui, &panel](){
         Level* c = current_level;
         c->destroy(window);
@@ -301,7 +305,7 @@ Level* Level::LoadLevel0(sf::RenderWindow& window, tgui::GuiSFML& gui)
     pd_demo_buttom->setText("PD Demo");
     pd_demo_buttom->setSize(100, 30);
     pd_demo_buttom->setOrigin(0.5f, 0.5f);
-    pd_demo_buttom->setPosition({panel->getPosition().x, panel->getPosition().y+150});
+    pd_demo_buttom->setPosition({panel->getPosition().x-150, panel->getPosition().y+150});
     pd_demo_buttom->onClick([&window, &gui, &panel](){
         Level* c = current_level;
         c->destroy(window);
@@ -315,15 +319,29 @@ Level* Level::LoadLevel0(sf::RenderWindow& window, tgui::GuiSFML& gui)
     rb_demo_button->setText("RB Demo");
     rb_demo_button->setSize(100, 30);
     rb_demo_button->setOrigin(0.5f, 0.5f);
-    rb_demo_button->setPosition({panel->getPosition().x+300, panel->getPosition().y+150});
+    rb_demo_button->setPosition({panel->getPosition().x+150, panel->getPosition().y+150});
     rb_demo_button->onClick([&window, &gui, &panel](){
         // Level* c = current_level;
         // c->destroy(window);
         // gui.remove(c->level_panel_);
-        // current_level = LoadLevelParticleDemo(window, gui);
+        // current_level = LoadLevelRigidBodyDemo(window, gui);
     });
 
     panel->add(rb_demo_button);
+
+    auto vf_demo_button = tgui::Button::create();
+    vf_demo_button->setText("VF Demo");
+    vf_demo_button->setSize(100, 30);
+    vf_demo_button->setOrigin(0.5f, 0.5f);
+    vf_demo_button->setPosition({panel->getPosition().x+400, panel->getPosition().y+150});
+    vf_demo_button->onClick([&window, &gui, &panel](){
+        // Level* c = current_level;
+        // c->destroy(window);
+        // gui.remove(c->level_panel_);
+        // current_level = LoadLevelVoronoiDemo(window, gui);
+    });
+
+    panel->add(vf_demo_button);
 
     auto exit_button = tgui::Button::create();
     exit_button->setText("Exit Game");
@@ -382,13 +400,13 @@ Level* Level::LoadLevel1(sf::RenderWindow& window, tgui::GuiSFML& gui)
     ParticleDynamics* pdyn = new ParticleDynamics(true);
 
     Particle* p = new Particle(*object_texture, {WIDTH/2, HEIGTH/2}, {0, 0}, 10);
+    p->sprite_->setScale({1, 1});
     ForceSource* f_mouse = new ForceSource(ForceType::AntiGravity, {0, 0}, 10);
 
     ForceSource* f_m1 = new ForceSource(ForceType::Gravity, {0, 0}, 0);
     ForceSource* f_m2 = new ForceSource(ForceType::Gravity, {0, 0}, 0);
     ForceSource* f_g = new ForceSource(ForceType::Constant, {0, 981});
 
-    p->sprite_->setScale({0.01f, 0.01f});
     pdyn->addParticle(p);
     pdyn->addForceSource(p);
     pdyn->addForceSource(f_mouse);
@@ -462,14 +480,15 @@ Level* Level::LoadLevel2(sf::RenderWindow& window, tgui::GuiSFML& gui)
     // ParticleDynamics
     ParticleDynamics* pdyn = new ParticleDynamics(true);
 
-    Particle* p = new Particle(*object_texture, {0, HEIGTH}, {0, 0}, 10);
+    Particle* p = new Particle(*object_texture, {WIDTH/2, HEIGTH/2}, {0, 0}, 10);
+    p->sprite_->setScale({1, 1});
+
     ForceSource* f_mouse = new ForceSource(ForceType::AntiGravity, {0, 0}, 10);
 
     ForceSource* f_m1 = new ForceSource(ForceType::Gravity, {0, 0}, 0);
     ForceSource* f_m2 = new ForceSource(ForceType::Gravity, {0, 0}, 0);
     ForceSource* f_g = new ForceSource(ForceType::Constant, {0, 981});
 
-    p->sprite_->setScale({0.01f, 0.01f});
     pdyn->addParticle(p);
     pdyn->addForceSource(p);
     pdyn->addForceSource(f_mouse);
@@ -485,11 +504,11 @@ Level* Level::LoadLevel2(sf::RenderWindow& window, tgui::GuiSFML& gui)
 
     // Magnetarea
     MagnetArea* ma = new MagnetArea();
-    ma->load("res/area_definitions/l1.txt");
+    ma->load("res/area_definitions/l2.txt");
 
     // targetarea
-    Spline* ta = new Spline({{500, 100}, {500, 100}, {500, 500}, {500, 500}}, *target_texture, true);
-    ta->setOrigin(1);
+    Spline* ta = new Spline({{300, 100}, {300, 100}, {900, 100}, {900, 100}}, *target_texture, true);
+    ta->setOrigin(0);
     ta->setScale({0.2f, 0.2f});
 
     Magnet* m1 = new Magnet(player1_keyset, ma->getSpawnPoint(), 0);
@@ -571,6 +590,13 @@ Level* Level::LoadLevel3(sf::RenderWindow& window, tgui::GuiSFML& gui)
 
     l->mouse_force = f_mouse;
 
+    if (l->background_music_.openFromFile("res/audio/wind.wav"))
+    {
+        l->background_music_.setVolume(20);
+        l->background_music_.play();
+        l->background_music_.setLoop(true);
+    }
+
     window.setView(view);
     return l;
 }
@@ -628,43 +654,12 @@ Level* Level::LoadLevel4(sf::RenderWindow& window, tgui::GuiSFML& gui)
 
     l->mouse_force = f_mouse;
 
-    window.setView(view);
-    return l;
-}
-
-Level* Level::LoadLevelWindTest(sf::RenderWindow& window, tgui::GuiSFML& gui)
-{
-    View view(sf::FloatRect(0.f, 0.f, (float) WIDTH, (float) HEIGTH));
-
-    // Textures
-    sf::Texture* object_texture = new sf::Texture();
-    object_texture->loadFromFile("res/object.png");
-
-    // Splines
-
-    // ParticleDynamics
-    ParticleDynamics* pdyn = new ParticleDynamics(true);
-
-    Particle* p = new Particle(*object_texture, {0, WIDTH/2}, {0, 0}, std::rand() % 1000);
-    ForceSource* f_g = new ForceSource(ForceType::Constant, {0, 981});
-    ForceSource* f_wind = new ForceSource(ForceType::VectorField, VectorFieldFunction::Wind);
-    p->K_ = 2;
-    p->sprite_->setScale({0.01f, 0.01f});
-    pdyn->addParticle(p);
-    pdyn->addForceSource(f_g);
-    pdyn->addForceSource(f_wind);
-
-    // RigidBodies
-
-    // Magnets
-
-    // Magnetarea
-
-    // create level
-    Level* l = new Level("LevelPDDemo");
-    l->loaded_textures_.push_back(object_texture);
-
-    l->particle_dynamics_.push_back(pdyn);
+    if (l->background_music_.openFromFile("res/audio/wind.wav"))
+    {
+        l->background_music_.setVolume(20);
+        l->background_music_.play();
+        l->background_music_.setLoop(true);
+    }
 
     window.setView(view);
     return l;
@@ -687,7 +682,7 @@ Level* Level::LoadLevelParticleDemo(sf::RenderWindow& window, tgui::GuiSFML& gui
     for (int i = 0; i < 20; i++)
     {
         Particle* p = new Particle(*object_texture, {std::rand() % WIDTH, std::rand() % HEIGTH}, {0, 0}, std::rand() % 50000);
-        p->sprite_->setScale({0.01f, 0.01f});
+        p->sprite_->setScale({0.5f, 0.5f});
         pdyn->addParticle(p);
         pdyn->addForceSource(p);
     }

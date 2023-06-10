@@ -1,0 +1,7 @@
+spawn 70 300
+spawn  1130 300
+
+marea 20 20 100 760
+marea 1080 20 100 760
+
+warea_fixed 5 5 200 100
