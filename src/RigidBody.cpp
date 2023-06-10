@@ -41,6 +41,7 @@ RigidBody::RigidBody(double mass, double density, unsigned int type, double widt
     this->body.setSize({(float)width, (float)height});
     this->body.setTexture(&texture);
     this->x = sf::Vector3<double>(posX, posY, 0.0f);
+    printf("%f %f\n", this->x.x, this->x.y);
     this->body.setPosition((float)posX, (float)posY);
     this->P = sf::Vector3<double>(0,0,0);
     this->L = 0.0;
@@ -246,94 +247,106 @@ void RigidBody::checkForCollisions(std::vector<RigidBody*> *rigid_bodies, std::v
                 continue;
             }
 
+            RigidBody* rb1 = rigid_bodies->at(i);
+            RigidBody* rb2 = rigid_bodies->at(j);
+            if ((rb1->type == 2 || rb1->type == 3) && (rb2->type == 2 || rb2->type == 3)) continue;
+
             double distance = 1000000000.0;
             double distanceObj = 0.0f;
             sf::Vector3<double> cOM_obstacle;
             sf::Vector3<double> collision_point;
             bool collision = false;
 
-            RigidBody* rb1 = rigid_bodies->at(i);
-            RigidBody* rb2 = rigid_bodies->at(j);
 
             if(rigid_bodies->at(j)->type == 2 || rigid_bodies->at(j)->type == 3) {
-                distance = ::fabsf(rigid_bodies->at(i)->x.y - rigid_bodies->at(j)->x.y);
-                distanceObj = (rigid_bodies->at(i)->radius + (rigid_bodies->at(j)->height / 2));
-                double left_cornerX = rigid_bodies->at(j)->x.x - (rigid_bodies->at(j)->width / 2.0f);
-                left_cornerX -= rigid_bodies->at(i)->radius;
-                double left_cornerY = rigid_bodies->at(j)->x.y - (rigid_bodies->at(j)->height / 2.0f);
-                left_cornerY -= rigid_bodies->at(i)->radius;
-                double bottom_right_cornerX = rigid_bodies->at(j)->x.x + (rigid_bodies->at(j)->width / 2.0f);
-                bottom_right_cornerX += rigid_bodies->at(i)->radius;
-                double bottom_right_cornerY = rigid_bodies->at(j)->x.y + (rigid_bodies->at(j)->height / 2.0f);
-                bottom_right_cornerY += rigid_bodies->at(i)->radius;
+                distance = ::fabsf(rb1->x.y - rb2->x.y);
+                distanceObj = (rb1->radius + (rb2->height / 2));
+                double left_cornerX = rb2->x.x - (rb2->width / 2.0f);
+                left_cornerX -= rb1->radius;
+                double left_cornerY = rb2->x.y - (rb2->height / 2.0f);
+                left_cornerY -= rb1->radius;
+                double bottom_right_cornerX = rb2->x.x + (rb2->width / 2.0f);
+                bottom_right_cornerX += rb1->radius;
+                double bottom_right_cornerY = rb2->x.y + (rb2->height / 2.0f);
+                bottom_right_cornerY += rb1->radius;
 
-                if (rigid_bodies->at(i)->x.x >= left_cornerX && rigid_bodies->at(i)->x.x <= bottom_right_cornerX &&
-                    rigid_bodies->at(i)->x.y >= left_cornerY && rigid_bodies->at(i)->x.y <= bottom_right_cornerY) {
+                if (rb1->x.x >= left_cornerX && rb1->x.x <= bottom_right_cornerX &&
+                    rb1->x.y >= left_cornerY && rb1->x.y <= bottom_right_cornerY) {
                     collision = true;
                 }
             }
             else {
-                distance = std::sqrt(std::pow(rigid_bodies->at(j)->x.x - rigid_bodies->at(i)->x.x, 2) +
-                                    std::pow(rigid_bodies->at(j)->x.y - rigid_bodies->at(i)->x.y, 2));
-                distanceObj = rigid_bodies->at(j)->radius + rigid_bodies->at(i)->radius;
+                distance = std::sqrt(std::pow(rb2->x.x - rb1->x.x, 2) +
+                                    std::pow(rb2->x.y - rb1->x.y, 2));
+                distanceObj = rb2->radius + rb1->radius;
                 if(distance <= distanceObj) {
                     collision = true;
                 }
             }
 
             if (collision) {
+                int ObstacleX = rb2->x.x;
+                int ObstacleY = rb2->x.y;
+                printf("before if: %f %f\n", rb2->x.x, rb2->x.y);
+                if(/* rb2->fixed && */rb2->type == 2 || rb2->type == 3) {
+                    double left_cornerX = rigid_bodies->at(j)->x.x - (rigid_bodies->at(j)->width / 2.0f);
+                    double left_cornerY = rigid_bodies->at(j)->x.y - (rigid_bodies->at(j)->height / 2.0f);
+                    double bottom_right_cornerX = rigid_bodies->at(j)->x.x + (rigid_bodies->at(j)->width / 2.0f);
+                    double bottom_right_cornerY = rigid_bodies->at(j)->x.y + (rigid_bodies->at(j)->height / 2.0f);
 
-                int ObstacleX = rigid_bodies->at(j)->x.x;
-                int ObstacleY = rigid_bodies->at(j)->x.y;
-                if(/* rigid_bodies->at(j)->fixed && */rigid_bodies->at(j)->type == 2 || rigid_bodies->at(j)->type == 3) {
-                    std::cout << "Position RigidBody " << i << " before  (" << rigid_bodies->at(i)->x.x << ", " << rigid_bodies->at(i)->x.y << ")" << std::endl;
-                    if(rigid_bodies->at(i)->x.y < rigid_bodies->at(j)->x.y) { // Above
-                        rigid_bodies->at(i)->x.y = rigid_bodies->at(j)->x.y - (rigid_bodies->at(j)->height / 2.0) - rigid_bodies->at(i)->radius;
-                    } else if(rigid_bodies->at(i)->x.y > rigid_bodies->at(j)->x.y) { //Beneath
-                        rigid_bodies->at(i)->x.y = rigid_bodies->at(j)->x.y + (rigid_bodies->at(j)->height / 2.0) + rigid_bodies->at(i)->radius;
+                    if(rb1->x.y <= left_cornerY) { // Above
+                        rb1->x.y = rigid_bodies->at(j)->x.y - (rigid_bodies->at(j)->height / 2.0) - rb1->radius;
+                        collision_point = sf::Vector3<double>(rb1->x.x, rb1->x.y + rb1->radius, 0.0f);
+                        rigid_bodies->at(j)->x.x = collision_point.x;
+                    } else if(rb1->x.y >= bottom_right_cornerY) { //Beneath
+                        rb1->x.y = rigid_bodies->at(j)->x.y + (rigid_bodies->at(j)->height / 2.0) + rb1->radius;
+                        collision_point = sf::Vector3<double>(rb1->x.x, rb1->x.y - rb1->radius, 0.0f);
+                        rigid_bodies->at(j)->x.x = collision_point.x;
                     } else {
-                        if(rigid_bodies->at(i)->x.x < rigid_bodies->at(j)->x.x) { //Left
-                            rigid_bodies->at(i)->x.x = rigid_bodies->at(j)->x.x - (rigid_bodies->at(j)->width / 2.0) - rigid_bodies->at(i)->radius;
+                        if(rb1->x.x <= left_cornerX) { //Left
+                            rb1->x.x = rigid_bodies->at(j)->x.x - (rigid_bodies->at(j)->width / 2.0) - rb1->radius;
+                            collision_point = sf::Vector3<double>(rb1->x.x + rb1->radius, rb1->x.y, 0.0f);
+                            rigid_bodies->at(j)->x.y = collision_point.y;
                         } else { //Right
-                            rigid_bodies->at(i)->x.x = rigid_bodies->at(j)->x.x + (rigid_bodies->at(j)->width / 2.0) + rigid_bodies->at(i)->radius;
+                            rb1->x.x = rigid_bodies->at(j)->x.x + (rigid_bodies->at(j)->width / 2.0) + rb1->radius;
+                            collision_point = sf::Vector3<double>(rb1->x.x - rb1->radius, rb1->x.y, 0.0f);
+                            rigid_bodies->at(j)->x.y = collision_point.y;
                         }
                     }
-                    collision_point = sf::Vector3<double>(rigid_bodies->at(i)->x.x, rigid_bodies->at(i)->x.y + rigid_bodies->at(i)->radius, 0.0f);
-                    std::cout << "Position RigidBody " << j << "  (" << rigid_bodies->at(j)->x.x << ", " << rigid_bodies->at(j)->x.y << ")" << std::endl;
-                    std::cout << "Position RigidBody " << i << "  (" << rigid_bodies->at(i)->x.x << ", " << rigid_bodies->at(i)->x.y << ")" << std::endl;
-                    std::cout << "Collision point   (" << collision_point.x << ", " << collision_point.y << ")" << std::endl;
-                    rigid_bodies->at(j)->x.x = collision_point.x;
-                    rigid_bodies->at(j)->v = {0,0,0};
-                    rigid_bodies->at(j)->torque_vec = {0,0,0};
-                    rigid_bodies->at(j)->L = 0.0f;
-                    applyCollision(rigid_bodies->at(i), rigid_bodies->at(j), collision_point);
-                    rigid_bodies->at(j)->v = {0,0,0};
-                    rigid_bodies->at(j)->torque_vec = {0,0,0};
-                    rigid_bodies->at(j)->L = 0.0f;
-                    rigid_bodies->at(j)->x.x = ObstacleX;
-                    rigid_bodies->at(j)->x.y = ObstacleY;
-                    rigid_bodies->at(j)->collision_found = false;
+
+                    rb2->v = {0,0,0};
+                    rb2->torque_vec = {0,0,0};
+                    rb2->L = 0.0f;
+                    applyCollision(rb1, rb2, collision_point);
+                    rb2->v = {0,0,0};
+                    rb2->torque_vec = {0,0,0};
+                    rb2->L = 0.0f;
+                    rb2->x.x = ObstacleX;
+                    rb2->x.y = ObstacleY;
+                    rb2->collision_found = false;
                 }
                 else {
-                    sf::Vector3<double> VNorm = normalizeVector(rigid_bodies->at(i)->v);
+                    sf::Vector3<double> VNorm = normalizeVector(rb1->v);
                     sf::Vector3<double> displacement = {-VNorm.x * (distanceObj - distance), -VNorm.y * (distanceObj - distance), 0.0f};
 
-                    sf::Vector3<double> newCenter = {rigid_bodies->at(i)->x.x + displacement.x,
-                                                     rigid_bodies->at(i)->x.y + displacement.y, 0.0f};
+                    sf::Vector3<double> newCenter = {rb1->x.x + displacement.x,
+                                                     rb1->x.y + displacement.y, 0.0f};
 
-                    rigid_bodies->at(i)->x = newCenter;
+                    rb1->x = newCenter;
 
                     //sleep(5);
 
-                    collision_point = (rigid_bodies->at(i)->x * rigid_bodies->at(j)->radius +
-                                                           rigid_bodies->at(j)->x * rigid_bodies->at(i)->radius) /
-                                                          (rigid_bodies->at(i)->radius + rigid_bodies->at(j)->radius);
+                    collision_point = (rb1->x * rb2->radius +
+                                                           rb2->x * rb1->radius) /
+                                                          (rb1->radius + rb2->radius);
 
-                    applyCollision(rigid_bodies->at(i), rigid_bodies->at(j), collision_point);
+                    applyCollision(rb1, rb2, collision_point);
                 }
-                if (rigid_bodies->at(j)->type == 3)
+                if (rb2->type == 3)
                 {
-                    VoronoiFracture(rigid_bodies->at(i), collision_point).calcualteVoronoiFracture(insertedBodies);
+                    printf("after if: %f %f\n", rb2->x.x, rb2->x.y);
+                    fflush(stdout);
+                    VoronoiFracture(rb1, collision_point).calcualteVoronoiFracture(insertedBodies);
                     if (in_game)
                     {
                         lost = true;
@@ -347,7 +360,7 @@ void RigidBody::checkForCollisions(std::vector<RigidBody*> *rigid_bodies, std::v
 
 void RigidBody::applyCollision(RigidBody *rigidBody1, RigidBody *rigidBody2, sf::Vector3<double> collision_point) {
     //calculate normal
-    sf::Vector3<double> normal = normalizeVector(rigidBody1->x - rigidBody2->x);
+    sf::Vector3<double> normal = normalizeVector(rigidBody1->x - collision_point);
 
     sf::Vector3<double> normal2 = sf::Vector3<double>(normal.x * normal.x, normal.y * normal.y,
                                                       normal.z * normal.z);
@@ -388,7 +401,7 @@ void RigidBody::applyCollision(RigidBody *rigidBody1, RigidBody *rigidBody2, sf:
     sf::Vector3<double> J = sf::Vector3<double>(normal.x * j_imp, normal.y * j_imp, normal.z * j_imp);
 
     rigidBody1->v = rigidBody1->v + J * (1.0f / rigidBody1->mass);;
-    rigidBody2->v = rigidBody2->v  - J * (1.0f / rigidBody2->mass);;
+    rigidBody2->v = rigidBody2->v - J * (1.0f / rigidBody2->mass);;
 
     //set torque vector
     rigidBody1->torque_vec = calcCrossProd(r1, right_side1);

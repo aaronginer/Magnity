@@ -44,24 +44,24 @@ class RigidBody {
         void drawAngularMomentum(sf::RenderWindow& window, sf::Vector2f position, double P);
 
         //state variables
-        bool fixed;
-        double width;
-        double height;
-        double mass; //mass of object
-        sf::Vector3<double> linear_acceleration; //linear acceleration of object
-        double angular_acceleration; //angular acceleration of object
-        sf::Vector3<double> x; //Position x(t)
-        sf::Vector3<double> P; //P(t) linear momentum
-        sf::Vector3<double> v; //v(t) linear velocity
+        bool fixed = false;
+        double width = 100;
+        double height = 100;
+        double mass = 10; //mass of object
+        sf::Vector3<double> linear_acceleration = {0, 0, 0}; //linear acceleration of object
+        double angular_acceleration = 0.f; //angular acceleration of object
+        sf::Vector3<double> x = {0, 0, 0}; //Position x(t)
+        sf::Vector3<double> P = {0, 0, 0}; //P(t) linear momentum
+        sf::Vector3<double> v = {0, 0, 0};; //v(t) linear velocity
         double L; //L(t) angular momentum
         double w; //w(t) angular velocity
-        sf::Vector3<double> force; //Sum of forces on object
-        sf::Vector3<double> torque_vec; //Torque - spin
+        sf::Vector3<double> force = {0, 0, 0};; //Sum of forces on object
+        sf::Vector3<double> torque_vec = {0, 0, 0};; //Torque - spin
         std::vector<std::pair<sf::Vector3<double>, sf::Vector3<double>>> force_points;
-        double Inertia;
+        double Inertia = 0.f;
         sf::RectangleShape body;
-        unsigned int type;
-        double radius;
+        unsigned int type = 0;
+        double radius = 0;
         bool collision_found = false;
         bool splitter = false;
         int id = 0;

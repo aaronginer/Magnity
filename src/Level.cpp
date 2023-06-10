@@ -693,12 +693,18 @@ Level* Level::LoadLevel4(sf::RenderWindow& window, tgui::GuiSFML& gui)
     pdyn->addForceSource(f_g);
 
     // RigidBodies
-    RigidBody* magnet_body = new RigidBody(5.0, 2.5, 0, 30.0, 30.0, *object_texture, true,
+    RigidBody* magnet_body1 = new RigidBody(5.0, 2.5, 0, 30.0, 30.0, *object_texture, true,
                                         206.0, 350.0f, RigidBody::rigid_bodies->size());
-    magnet_body->visible = false;
-    magnet_body->disabled = true;
-    RigidBody::rigid_bodies->push_back(magnet_body);
+    magnet_body1->visible = false;
+    magnet_body1->disabled = true;
+    RigidBody::rigid_bodies->push_back(magnet_body1);
 
+    RigidBody* magnet_body2 = new RigidBody(5.0, 2.5, 0, 30.0, 30.0, *object_texture, true,
+                                        206.0, 350.0f, RigidBody::rigid_bodies->size());
+    magnet_body2->visible = false;
+    magnet_body2->disabled = true;
+    RigidBody::rigid_bodies->push_back(magnet_body2);
+    
     RigidBody* object = new RigidBody(1.0, 2.5, 0, 30.0, 30.0, *object_texture, false,
                                         300.0, 350.0f, RigidBody::rigid_bodies->size());
     object->is_game_object = true;
@@ -709,18 +715,19 @@ Level* Level::LoadLevel4(sf::RenderWindow& window, tgui::GuiSFML& gui)
     ma->load("res/area_definitions/l4.txt");
 
     // targetarea
-    Spline* ta = new Spline({{150, 120}, {150, HEIGTH/2}, {150, HEIGTH-120}, {WIDTH/2, HEIGTH-100}, 
-                            {WIDTH-150, HEIGTH-120}, {WIDTH-150, HEIGTH/2}, {WIDTH-100, 120}, {WIDTH/2, 120}}, *target_texture, true);
-    Spline::traversal_speed_ = 20;
-    ta->setOrigin(0);
-    ta->setScale({0.1f, 0.1f});
+    SpriteObject* ta = new SpriteObject(*target_texture, {600, 150}, 0);
+    ta->setScale({0.135f, 0.135f});
 
     // Magnets
     MagnetKeySet player1_keyset = { sf::Keyboard::Key::A, sf::Keyboard::Key::D, sf::Keyboard::Key::W, sf::Keyboard::Key::S, sf::Keyboard::Key::E };
+    MagnetKeySet player2_keyset = { sf::Keyboard::Key::Left, sf::Keyboard::Key::Right, sf::Keyboard::Key::Up, sf::Keyboard::Key::Down, sf::Keyboard::Key::Enter };
 
-    Magnet* m = new Magnet(player1_keyset, ma->getSpawnPoint(), 0, 10, {0.07f, 0.07f});
-    m->setFollowObject(&object->obj);
-    m->setForceSource(nullptr, magnet_body);
+    Magnet* m1 = new Magnet(player1_keyset, ma->getSpawnPoint(), 0, 20);
+    m1->setFollowObject(&object->obj);
+    m1->setForceSource(nullptr, magnet_body1);
+    Magnet* m2 = new Magnet(player2_keyset, ma->getSpawnPoint(), 1, 20);
+    m2->setFollowObject(&object->obj);
+    m2->setForceSource(nullptr, magnet_body2);
 
     // Walls
     WallArea* wa = new WallArea();
@@ -728,13 +735,13 @@ Level* Level::LoadLevel4(sf::RenderWindow& window, tgui::GuiSFML& gui)
 
     // create level
     Level* l = new Level("Level4");
-    l->splines_.push_back(ta);
     l->loaded_textures_.push_back(bg_texture);
     l->loaded_textures_.push_back(target_texture);
     l->loaded_textures_.push_back(object_texture);
     l->particle_dynamics_.push_back(pdyn);
     l->game_objects_.push_back(background);
-    l->magnets_.push_back(m);
+    l->magnets_.push_back(m1);
+    l->magnets_.push_back(m2);
     l->magnet_area_ = ma;
     l->target_area_ = ta;
     l->wall_area_ = wa;
@@ -882,7 +889,7 @@ Level* Level::LoadLevelVoronoiDemo(sf::RenderWindow& window, tgui::GuiSFML& gui)
     for (int i = 0; i < 37; i++)
     {
         RigidBody* object = new RigidBody(0.001f, 2.5, 0, 30.0, 30.0, *object_texture, false,
-                                        40 + (i * 30), 60, RigidBody::rigid_bodies->size());
+                                        50 + (i * 30), 60, RigidBody::rigid_bodies->size());
         RigidBody::rigid_bodies->push_back(object);
     }
 

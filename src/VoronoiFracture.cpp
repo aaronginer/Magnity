@@ -43,7 +43,6 @@ void VoronoiFracture::computeVoronoiPoints(sf::Vector3<double> entryPoint) {
     int concentrated_minY = 0;
 
     //TODO: round number to integer
-
     if(distObj.x > 0) {
         if(distObj.y > 0) {
             concentrated_maxX = rigidBody->body.getTexture()->getSize().x / 2;
@@ -58,7 +57,7 @@ void VoronoiFracture::computeVoronoiPoints(sf::Vector3<double> entryPoint) {
             concentrated_minY = 0.0;
         }
         else { // y is zero
-            concentrated_maxX = 0.0;
+            concentrated_maxX = rigidBody->body.getTexture()->getSize().x;
             concentrated_minX = 0.0;
             concentrated_maxY = rigidBody->body.getTexture()->getSize().y;
             concentrated_minY = 0.0;
@@ -262,9 +261,10 @@ void VoronoiFracture::calcualteVoronoiFracture(std::vector<RigidBody*> *inserted
     {
         m->follow_object_ = nullptr;
     }
-    auto ptr = *iter;
-    delete ptr;
-    RigidBody::rigid_bodies->erase(iter);
+
+    // auto ptr = *iter;
+    // delete ptr;
+    // RigidBody::rigid_bodies->erase(iter);
 }
 
 //https://www.shadertoy.com/view/4dS3Wd
