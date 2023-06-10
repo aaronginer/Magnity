@@ -13,6 +13,7 @@ extern std::mutex level_lock;
 extern bool won;
 extern bool lost;
 extern bool game_paused;
+extern bool in_game;
 
 Level::Level(std::string name)
 {
@@ -24,6 +25,8 @@ Level::Level(std::string name)
 void Level::destroy(sf::RenderWindow& window)
 {
     assert(level_lock.try_lock() == false);
+
+    in_game = false;
 
     for (Spline* s : this->splines_)
     {
@@ -48,10 +51,11 @@ void Level::destroy(sf::RenderWindow& window)
         this->particle_dynamics_.erase(pdyn_iter);
     }
 
-    /*for (RigidBody* r : this->rigid_bodies_)
+    for (auto iter = RigidBody::rigid_bodies->begin(); iter != RigidBody::rigid_bodies->end(); iter++)
     {
-        delete r;
-    }*/
+        delete *iter;
+    }
+    RigidBody::rigid_bodies->clear();
 
     for (sf::Texture* t : loaded_textures_)
     {
@@ -78,6 +82,7 @@ void Level::destroy(sf::RenderWindow& window)
     window.setView(window.getDefaultView());
 }
 
+float total_time = 0.f;
 void Level::update(float time_delta)
 {
     level_lock.lock();
@@ -92,10 +97,7 @@ void Level::update(float time_delta)
         p->update(time_delta);
     }
 
-    /*for (RigidBody* r : this->rigid_bodies_)
-    {
-        // update rb
-    }*/
+    RigidBody::updateRigidBodies(RigidBody::rigid_bodies, total_time, time_delta);
 
     for (Magnet* m : this->magnets_)
     {
@@ -170,12 +172,9 @@ void Level::draw(sf::RenderWindow& window, float delta_time)
         p->drawTrail(window);
     }
     
-
-    /*for (RigidBody* r : this->rigid_bodies_)
-    {
-        // draw rb
-    }*/
-
+    RigidBody::DisplayBodies(window, RigidBody::rigid_bodies);
+    RigidBody::drawVelocityArrows(window, RigidBody::rigid_bodies);
+ 
     for (Magnet* m : this->magnets_)
     {
         m->draw(window);
@@ -315,7 +314,7 @@ Level* Level::LoadLevel0(sf::RenderWindow& window, tgui::GuiSFML& gui)
     rb_demo_button->setOrigin(0.5f, 0.5f);
     rb_demo_button->setPosition({panel->getPosition().x+150, panel->getPosition().y+150});
     rb_demo_button->onClick([&window, &gui, &panel](){
-        // LoadLevel(window, gui, &LoadLevelRigidBodyDemo);
+        LoadLevel(window, gui, &LoadLevelRigidBodyDemo);
     });
 
     panel->add(rb_demo_button);
@@ -326,7 +325,7 @@ Level* Level::LoadLevel0(sf::RenderWindow& window, tgui::GuiSFML& gui)
     vf_demo_button->setOrigin(0.5f, 0.5f);
     vf_demo_button->setPosition({panel->getPosition().x+400, panel->getPosition().y+150});
     vf_demo_button->onClick([&window, &gui, &panel](){
-        // LoadLevel(window, gui, &LoadLevelVoronoiDemo);
+        LoadLevel(window, gui, &LoadLevelVoronoiDemo);
     });
 
     panel->add(vf_demo_button);
@@ -387,25 +386,23 @@ Level* Level::LoadLevel1(sf::RenderWindow& window, tgui::GuiSFML& gui)
     // Splines
 
     // ParticleDynamics
-    ParticleDynamics* pdyn = new ParticleDynamics(true);
-
-    Particle* p = new Particle(*object_texture, {WIDTH/2, HEIGTH/2}, {0, 0}, 10);
-    p->sprite_->setScale({1, 1});
-    ForceSource* f_mouse = new ForceSource(ForceType::AntiGravity, {0, 0}, 10);
-
-    ForceSource* f_m1 = new ForceSource(ForceType::Gravity, {0, 0}, 0);
-    ForceSource* f_m2 = new ForceSource(ForceType::Gravity, {0, 0}, 0);
-    ForceSource* f_g = new ForceSource(ForceType::Constant, {0, 981});
-
-    pdyn->addParticle(p);
-    pdyn->addForceSource(p);
-    pdyn->addForceSource(f_mouse);
-    pdyn->addForceSource(f_m1);
-    pdyn->addForceSource(f_m2);
-    pdyn->addForceSource(f_g);
 
     // RigidBodies
+    RigidBody* magnet_body1 = new RigidBody(5.0, 2.5, 0, 30.0, 30.0, *object_texture, true,
+                                        206.0, 350.0f, RigidBody::rigid_bodies->size());
+    magnet_body1->visible = false;
+    magnet_body1->disabled = true;
+    RigidBody::rigid_bodies->push_back(magnet_body1);
+    RigidBody* magnet_body2 = new RigidBody(5.0, 2.5, 0, 30.0, 30.0, *object_texture, true,
+                                        206.0, 350.0f, RigidBody::rigid_bodies->size());
+    magnet_body2->visible = false;
+    magnet_body2->disabled = true;
+    RigidBody::rigid_bodies->push_back(magnet_body2);
 
+    RigidBody* object = new RigidBody(1.0, 2.5, 0, 30.0, 30.0, *object_texture, false,
+                                        300.0, 350.0f, RigidBody::rigid_bodies->size());
+    object->is_game_object = true;
+    RigidBody::rigid_bodies->push_back(object);
     
     // Magnetarea
     MagnetArea* ma = new MagnetArea();
@@ -423,28 +420,27 @@ Level* Level::LoadLevel1(sf::RenderWindow& window, tgui::GuiSFML& gui)
     MagnetKeySet player1_keyset = { sf::Keyboard::Key::A, sf::Keyboard::Key::D, sf::Keyboard::Key::W, sf::Keyboard::Key::S, sf::Keyboard::Key::E };
     MagnetKeySet player2_keyset = { sf::Keyboard::Key::Left, sf::Keyboard::Key::Right, sf::Keyboard::Key::Up, sf::Keyboard::Key::Down, sf::Keyboard::Key::Enter };
 
-    Magnet* m1 = new Magnet(player1_keyset, ma->getSpawnPoint(), 0);
-    m1->setFollowObject(p->sprite_);
-    m1->setForceSource(f_m1);
-    Magnet* m2 = new Magnet(player2_keyset, ma->getSpawnPoint(), 1);
-    m2->setFollowObject(p->sprite_);
-    m2->setForceSource(f_m2);
+    Magnet* m1 = new Magnet(player1_keyset, ma->getSpawnPoint(), 0, 40);
+    m1->setFollowObject(&object->obj);
+    m1->setForceSource(nullptr, magnet_body1);
+    Magnet* m2 = new Magnet(player2_keyset, ma->getSpawnPoint(), 1, 40);
+    m2->setFollowObject(&object->obj);
+    m2->setForceSource(nullptr, magnet_body2);
 
     // create level
     Level* l = new Level("Level1");
     l->loaded_textures_.push_back(object_texture);
     l->loaded_textures_.push_back(target_texture);
     l->loaded_textures_.push_back(bg_texture);
-    l->particle_dynamics_.push_back(pdyn);
     l->game_objects_.push_back(background);
     l->magnets_.push_back(m1);
     l->magnets_.push_back(m2);
     l->magnet_area_ = ma;
     l->wall_area_ = wa;
     l->target_area_ = ta;
-    l->object_ = p->sprite_;
+    l->object_ = &object->obj;
 
-    l->mouse_force = f_mouse;
+    // l->mouse_force = f_mouse;
 
     if (l->background_music_.openFromFile("res/audio/spring.wav"))
     {
@@ -476,25 +472,23 @@ Level* Level::LoadLevel2(sf::RenderWindow& window, tgui::GuiSFML& gui)
     // Splines
 
     // ParticleDynamics
-    ParticleDynamics* pdyn = new ParticleDynamics(true);
-
-    Particle* p = new Particle(*object_texture, {WIDTH/2, HEIGTH/2}, {0, 0}, 10);
-    p->sprite_->setScale({1, 1});
-
-    ForceSource* f_mouse = new ForceSource(ForceType::AntiGravity, {0, 0}, 10);
-
-    ForceSource* f_m1 = new ForceSource(ForceType::Gravity, {0, 0}, 0);
-    ForceSource* f_m2 = new ForceSource(ForceType::Gravity, {0, 0}, 0);
-    ForceSource* f_g = new ForceSource(ForceType::Constant, {0, 981});
-
-    pdyn->addParticle(p);
-    pdyn->addForceSource(p);
-    pdyn->addForceSource(f_mouse);
-    pdyn->addForceSource(f_m1);
-    pdyn->addForceSource(f_m2);
-    pdyn->addForceSource(f_g);
 
     // RigidBodies
+    RigidBody* magnet_body1 = new RigidBody(5.0, 2.5, 0, 30.0, 30.0, *object_texture, true,
+                                        206.0, 350.0f, RigidBody::rigid_bodies->size());
+    magnet_body1->visible = false;
+    magnet_body1->disabled = true;
+    RigidBody::rigid_bodies->push_back(magnet_body1);
+    RigidBody* magnet_body2 = new RigidBody(5.0, 2.5, 0, 30.0, 30.0, *object_texture, true,
+                                        206.0, 350.0f, RigidBody::rigid_bodies->size());
+    magnet_body2->visible = false;
+    magnet_body2->disabled = true;
+    RigidBody::rigid_bodies->push_back(magnet_body2);
+
+    RigidBody* object = new RigidBody(1.0, 2.5, 0, 30.0, 30.0, *object_texture, false,
+                                        300.0, 350.0f, RigidBody::rigid_bodies->size());
+    object->is_game_object = true;
+    RigidBody::rigid_bodies->push_back(object);
 
     // Magnetarea
     MagnetArea* ma = new MagnetArea();
@@ -513,12 +507,12 @@ Level* Level::LoadLevel2(sf::RenderWindow& window, tgui::GuiSFML& gui)
     MagnetKeySet player1_keyset = { sf::Keyboard::Key::A, sf::Keyboard::Key::D, sf::Keyboard::Key::W, sf::Keyboard::Key::S, sf::Keyboard::Key::E };
     MagnetKeySet player2_keyset = { sf::Keyboard::Key::Left, sf::Keyboard::Key::Right, sf::Keyboard::Key::Up, sf::Keyboard::Key::Down, sf::Keyboard::Key::Enter };
 
-    Magnet* m1 = new Magnet(player1_keyset, ma->getSpawnPoint(), 0);
-    m1->setFollowObject(p->sprite_);
-    m1->setForceSource(f_m1);
-    Magnet* m2 = new Magnet(player2_keyset, ma->getSpawnPoint(), 1);
-    m2->setFollowObject(p->sprite_);
-    m2->setForceSource(f_m2);
+    Magnet* m1 = new Magnet(player1_keyset, ma->getSpawnPoint(), 0, 20);
+    m1->setFollowObject(&object->obj);
+    m1->setForceSource(nullptr, magnet_body1);
+    Magnet* m2 = new Magnet(player2_keyset, ma->getSpawnPoint(), 1, 20);
+    m2->setFollowObject(&object->obj);
+    m2->setForceSource(nullptr, magnet_body2);
 
     // create level
     Level* l = new Level("Level2");
@@ -526,16 +520,15 @@ Level* Level::LoadLevel2(sf::RenderWindow& window, tgui::GuiSFML& gui)
     l->loaded_textures_.push_back(object_texture);
     l->loaded_textures_.push_back(target_texture);
     l->loaded_textures_.push_back(bg_texture);
-    l->particle_dynamics_.push_back(pdyn);
     l->magnets_.push_back(m1);
     l->magnets_.push_back(m2);
     l->game_objects_.push_back(background);
     l->magnet_area_ = ma;
     l->target_area_ = ta;
     l->wall_area_ = wa;
-    l->object_ = p->sprite_;
+    l->object_ = &object->obj;
 
-    l->mouse_force = f_mouse;
+    // l->mouse_force = f_mouse;
 
     if (l->background_music_.openFromFile("res/audio/spring.wav"))
     {
@@ -573,16 +566,6 @@ Level* Level::LoadLevel3(sf::RenderWindow& window, tgui::GuiSFML& gui)
     // Splines
 
     // ParticleDynamics
-    ParticleDynamics* pdyn_o = new ParticleDynamics(true);
-    Particle* p = new Particle(*object_texture, {WIDTH/2.f, HEIGTH/2.f}, {0, 0}, 10);
-    p->sprite_->setScale({1, 1});
-    pdyn_o->addParticle(p);
-    ForceSource* f_m = new ForceSource(ForceType::Gravity, {0, 0}, 0);
-    ForceSource* f_g1 = new ForceSource(ForceType::Constant, {0, 981});
-    pdyn_o->addForceSource(f_m);
-    pdyn_o->addForceSource(f_g1);
-    pdyn_o->addForceSource(p);
-
     ParticleDynamics* pdyn = new ParticleDynamics(true);
     pdyn->spawner_enabled_ = true;
 
@@ -601,6 +584,21 @@ Level* Level::LoadLevel3(sf::RenderWindow& window, tgui::GuiSFML& gui)
     pdyn->addForceSource(f_g);
 
     // RigidBodies
+    RigidBody* magnet_body1 = new RigidBody(5.0, 2.5, 0, 30.0, 30.0, *object_texture, true,
+                                        206.0, 350.0f, RigidBody::rigid_bodies->size());
+    magnet_body1->visible = false;
+    magnet_body1->disabled = true;
+    RigidBody::rigid_bodies->push_back(magnet_body1);
+    RigidBody* magnet_body2 = new RigidBody(5.0, 2.5, 0, 30.0, 30.0, *object_texture, true,
+                                        206.0, 350.0f, RigidBody::rigid_bodies->size());
+    // magnet_body2->visible = false;
+    // magnet_body2->disabled = true;
+    // RigidBody::rigid_bodies->push_back(magnet_body2);
+
+    RigidBody* object = new RigidBody(1.0, 2.5, 0, 30.0, 30.0, *object_texture, false,
+                                        300.0, 350.0f, RigidBody::rigid_bodies->size());
+    object->is_game_object = true;
+    RigidBody::rigid_bodies->push_back(object);
 
     // Magnetarea
     MagnetArea* ma = new MagnetArea();
@@ -621,9 +619,9 @@ Level* Level::LoadLevel3(sf::RenderWindow& window, tgui::GuiSFML& gui)
     MagnetKeySet player1_keyset = { sf::Keyboard::Key::A, sf::Keyboard::Key::D, sf::Keyboard::Key::W, sf::Keyboard::Key::S, sf::Keyboard::Key::E };
     MagnetKeySet player2_keyset = { sf::Keyboard::Key::Left, sf::Keyboard::Key::Right, sf::Keyboard::Key::Up, sf::Keyboard::Key::Down, sf::Keyboard::Key::Enter };
 
-    Magnet* m = new Magnet(player1_keyset, ma->getSpawnPoint(), 0, {0.07f, 0.07f});
-    m->setFollowObject(p->sprite_);
-    m->setForceSource(f_m);
+    Magnet* m = new Magnet(player1_keyset, ma->getSpawnPoint(), 0, 10, {0.07f, 0.07f});
+    m->setFollowObject(&object->obj);
+    m->setForceSource(nullptr, magnet_body1);
 
     // create level
     Level* l = new Level("Level3");
@@ -631,14 +629,13 @@ Level* Level::LoadLevel3(sf::RenderWindow& window, tgui::GuiSFML& gui)
     l->loaded_textures_.push_back(object_texture);
     l->loaded_textures_.push_back(target_texture);
     l->loaded_textures_.push_back(bg_texture);
-    l->particle_dynamics_.push_back(pdyn_o);
     l->particle_dynamics_.push_back(pdyn);
     l->game_objects_.push_back(background);
     l->magnets_.push_back(m);
     l->magnet_area_ = ma;
     l->target_area_ = ta;
     l->wall_area_ = wa;
-    l->object_ = p->sprite_;
+    l->object_ = &object->obj;
 
     l->mouse_force = f_mouse;
 
@@ -666,6 +663,8 @@ Level* Level::LoadLevel4(sf::RenderWindow& window, tgui::GuiSFML& gui)
     // Textures
     sf::Texture* object_texture = new sf::Texture();
     object_texture->loadFromFile("res/object.png");
+    sf::Texture* target_texture = new sf::Texture();
+    target_texture->loadFromFile("res/target.png");
     sf::Texture* bg_texture = new sf::Texture();
     bg_texture->loadFromFile("res/winter.png");
 
@@ -676,16 +675,6 @@ Level* Level::LoadLevel4(sf::RenderWindow& window, tgui::GuiSFML& gui)
     // Splines
 
     // ParticleDynamics
-    ParticleDynamics* pdyn_o = new ParticleDynamics(true);
-    Particle* p = new Particle(*object_texture, {WIDTH/2, HEIGTH/2}, {0, 0}, 10);
-    p->sprite_->setScale({1, 1});
-    pdyn_o->addParticle(p);
-    ForceSource* f_m = new ForceSource(ForceType::Gravity, {0, 0}, 0);
-    ForceSource* f_g1 = new ForceSource(ForceType::Constant, {0, 981});
-    pdyn_o->addForceSource(f_m);
-    pdyn_o->addForceSource(f_g1);
-    pdyn_o->addForceSource(p);
-
     ParticleDynamics* pdyn = new ParticleDynamics(true);
     pdyn->spawner_enabled_ = true;
 
@@ -704,22 +693,53 @@ Level* Level::LoadLevel4(sf::RenderWindow& window, tgui::GuiSFML& gui)
     pdyn->addForceSource(f_g);
 
     // RigidBodies
+    RigidBody* magnet_body = new RigidBody(5.0, 2.5, 0, 30.0, 30.0, *object_texture, true,
+                                        206.0, 350.0f, RigidBody::rigid_bodies->size());
+    magnet_body->visible = false;
+    magnet_body->disabled = true;
+    RigidBody::rigid_bodies->push_back(magnet_body);
 
-    // Magnets
+    RigidBody* object = new RigidBody(1.0, 2.5, 0, 30.0, 30.0, *object_texture, false,
+                                        300.0, 350.0f, RigidBody::rigid_bodies->size());
+    object->is_game_object = true;
+    RigidBody::rigid_bodies->push_back(object);
 
     // Magnetarea
+    MagnetArea* ma = new MagnetArea();
+    ma->load("res/area_definitions/l4.txt");
 
     // targetarea
+    Spline* ta = new Spline({{150, 120}, {150, HEIGTH/2}, {150, HEIGTH-120}, {WIDTH/2, HEIGTH-100}, 
+                            {WIDTH-150, HEIGTH-120}, {WIDTH-150, HEIGTH/2}, {WIDTH-100, 120}, {WIDTH/2, 120}}, *target_texture, true);
+    Spline::traversal_speed_ = 20;
+    ta->setOrigin(0);
+    ta->setScale({0.1f, 0.1f});
+
+    // Magnets
+    MagnetKeySet player1_keyset = { sf::Keyboard::Key::A, sf::Keyboard::Key::D, sf::Keyboard::Key::W, sf::Keyboard::Key::S, sf::Keyboard::Key::E };
+
+    Magnet* m = new Magnet(player1_keyset, ma->getSpawnPoint(), 0, 10, {0.07f, 0.07f});
+    m->setFollowObject(&object->obj);
+    m->setForceSource(nullptr, magnet_body);
+
+    // Walls
+    WallArea* wa = new WallArea();
+    wa->load("res/area_definitions/l4.txt");
 
     // create level
     Level* l = new Level("Level4");
+    l->splines_.push_back(ta);
     l->loaded_textures_.push_back(bg_texture);
-    l->particle_dynamics_.push_back(pdyn_o);
+    l->loaded_textures_.push_back(target_texture);
+    l->loaded_textures_.push_back(object_texture);
     l->particle_dynamics_.push_back(pdyn);
     l->game_objects_.push_back(background);
-
+    l->magnets_.push_back(m);
+    l->magnet_area_ = ma;
+    l->target_area_ = ta;
+    l->wall_area_ = wa;
     l->mouse_force = f_mouse;
-    l->object_ = p->sprite_;
+    l->object_ = &object->obj;
 
     if (l->background_music_.openFromFile("res/audio/wind.wav"))
     {
@@ -761,7 +781,7 @@ Level* Level::LoadLevelParticleDemo(sf::RenderWindow& window, tgui::GuiSFML& gui
     // Magnetarea
 
     // create level
-    Level* l = new Level("LevelPDDemo");
+    Level* l = new Level("PDDemo");
     l->loaded_textures_.push_back(object_texture);
 
     l->particle_dynamics_.push_back(pdyn);
@@ -793,7 +813,7 @@ Level* Level::LoadLevelPathInterpolDemo(sf::RenderWindow& window, tgui::GuiSFML&
     // Magnetarea
 
     // create level
-    Level* l = new Level("LevelPIDemo");
+    Level* l = new Level("PIDemo");
     l->loaded_textures_.push_back(object_texture);
 
     l->splines_.push_back(s);
@@ -805,6 +825,87 @@ Level* Level::LoadLevelPathInterpolDemo(sf::RenderWindow& window, tgui::GuiSFML&
     return l;
 }
 
+Level* Level::LoadLevelRigidBodyDemo(sf::RenderWindow& window, tgui::GuiSFML& gui)
+{
+    SpriteSpawner::disable();
+    View view(sf::FloatRect(0.f, 0.f, (float) WIDTH, (float) HEIGTH));
+
+    // Textures
+    sf::Texture* object_texture = new sf::Texture();
+    object_texture->loadFromFile("res/object.png");
+
+    // Splines
+    
+    // ParticleDynamics
+
+    // RigidBodies
+    for (int i = 0; i < 37; i++)
+    {
+        RigidBody* object = new RigidBody(0.001f, 2.5, 0, 30.0, 30.0, *object_texture, false,
+                                        40 + (i * 30), 40, RigidBody::rigid_bodies->size());
+        RigidBody::rigid_bodies->push_back(object);
+    }
+
+    // Magnets
+
+    // Magnetarea
+
+    // Walls
+    WallArea* wa = new WallArea();
+    wa->load("res/area_definitions/rb_demo.txt");
+
+    // create level
+    Level* l = new Level("RBDemo");
+    l->loaded_textures_.push_back(object_texture);
+    l->wall_area_ = wa;
+
+    l->background_color_ = sf::Color::Black;
+
+    window.setView(view);
+    return l;
+}
+
+Level* Level::LoadLevelVoronoiDemo(sf::RenderWindow& window, tgui::GuiSFML& gui)
+{
+    SpriteSpawner::disable();
+    View view(sf::FloatRect(0.f, 0.f, (float) WIDTH, (float) HEIGTH));
+
+    // Textures
+    sf::Texture* object_texture = new sf::Texture();
+    object_texture->loadFromFile("res/object.png");
+
+    // Splines
+    
+    // ParticleDynamics
+
+    // RigidBodies
+    for (int i = 0; i < 37; i++)
+    {
+        RigidBody* object = new RigidBody(0.001f, 2.5, 0, 30.0, 30.0, *object_texture, false,
+                                        40 + (i * 30), 60, RigidBody::rigid_bodies->size());
+        RigidBody::rigid_bodies->push_back(object);
+    }
+
+    // Magnets
+
+    // Magnetarea
+
+    // Walls
+    WallArea* wa = new WallArea();
+    wa->load("res/area_definitions/vf_demo.txt");
+
+    // create level
+    Level* l = new Level("VFDemo");
+    l->loaded_textures_.push_back(object_texture);
+    l->wall_area_ = wa;
+
+    l->background_color_ = sf::Color::Black;
+
+    window.setView(view);
+    return l;
+}
+
+
 Level* Level::LoadLevel(sf::RenderWindow& window, tgui::GuiSFML& gui, Level* (*levelToLoad)(sf::RenderWindow& window, tgui::GuiSFML& gui))
 {
     level_lock.lock();
@@ -815,6 +916,7 @@ Level* Level::LoadLevel(sf::RenderWindow& window, tgui::GuiSFML& gui, Level* (*l
     currentLevelFunction = levelToLoad;
     current_level = levelToLoad(window, gui);
 
+    in_game = current_level->name.find("Level") != std::string::npos;
     level_lock.unlock();
 
     return c;

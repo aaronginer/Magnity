@@ -1,7 +1,7 @@
-spawn 70 550
-spawn  1050 50
+spawn 100 390
 
-marea 20 500 300 100
-marea 1000 10 100 700
+marea 1 375 1198 50
 
-warea_bouncy 300 180 600 50
+warea_fixed 300 170 600 30
+warea_bouncy 300 600 600 30
+warea_bouncy 1000 10 100 780

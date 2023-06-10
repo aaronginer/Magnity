@@ -39,8 +39,8 @@ tgui::Panel::Ptr won_panel;
 tgui::Panel::Ptr lost_panel;
 
 // Global variables
-int animation_update_rate = 100;
-sf::Time time_per_animation_update = sf::seconds(1.0f / 100); 
+int animation_update_rate = 60;
+sf::Time time_per_animation_update = sf::seconds(1.0f / 60); 
 int fps = 60;
 sf::Time time_per_frame = sf::seconds(1.0f / 60); 
 
@@ -49,6 +49,7 @@ Level* current_level = nullptr;
 std::mutex level_lock;
 Level* (*currentLevelFunction)(sf::RenderWindow& window, tgui::GuiSFML& gui);
 
+bool in_game = false;
 bool game_paused = false;
 bool won = false;
 bool lost = false;
@@ -95,7 +96,7 @@ int main()
             {
                 if (event.key.code == Keyboard::Key::Escape)
                 {
-                    if (current_level->name.compare("Level0") != 0) game_paused = !game_paused;
+                    if (current_level->name.compare("Level0") != 0 && !(won == true || lost == true)) game_paused = !game_paused;
                 }
 
                 current_level->handlePolledKeyInput(event);
@@ -344,6 +345,15 @@ tgui::Panel::Ptr createControlPanel(sf::RenderWindow& window)
 
     panel->add(rk4CheckboxLabel);
     panel->add(rk4Checkbox);
+
+    // Create the Show momentum / velocity vectors
+    tgui::Button::Ptr showVelocityButton = tgui::Button::create();
+    showVelocityButton->setText("RB: Show Momentum and Velocity vectors");
+    showVelocityButton->setSize(400, 30);
+    showVelocityButton->setPosition(10, 340);
+    showVelocityButton->onPress.connect([&]() { RigidBody::draw_vectors_ = !RigidBody::draw_vectors_; });
+
+    panel->add(showVelocityButton);
 
     // panel sizing
     sf::Vector2f panelSize(0, 0);

@@ -1,10 +1,12 @@
 #include "Magnet.h"
 #include "cmath"
+#include "assert.h"
 #define M_PI 3.14159265358979323846
 
-Magnet::Magnet(MagnetKeySet key_set, sf::Vector2f position, int player, sf::Vector2f scale)
+Magnet::Magnet(MagnetKeySet key_set, sf::Vector2f position, int player, int strength, sf::Vector2f scale)
 {
     this->key_set_ = key_set;
+    this->strength_ = strength;
 
     sf::Texture* active = new Texture();
     active->loadFromFile("res/magnet.png");
@@ -98,6 +100,7 @@ void Magnet::toggleLevel()
     this->levels_[2]->active_ = this->level_ > 2;
 
     if (force_source_!= nullptr) this->force_source_->m_ = this->level_ * 300000;
+    if (rigid_body_ != nullptr) this->rigid_body_->mass = this->level_ * this->strength_;
 }
 
 void Magnet::setFollowObject(GameObject* follow_object)
@@ -105,11 +108,21 @@ void Magnet::setFollowObject(GameObject* follow_object)
     this->follow_object_ = follow_object;
 }
 
-void  Magnet::setForceSource(ForceSource* force_source_)
+void  Magnet::setForceSource(ForceSource* force_source, RigidBody* body)
 {
-    this->force_source_ = force_source_;
-    this->force_source_->x_ = this->magnet_active_->getPosition();
-    this->force_source_->m_ = this->level_ * 300000;
+    assert(force_source != nullptr || body != nullptr);
+    if (force_source != nullptr)
+    {
+        this->force_source_ = force_source_;
+        this->force_source_->x_ = this->magnet_active_->getPosition();
+        this->force_source_->m_ = this->level_ * 300000;
+    }
+    else
+    {
+        this->rigid_body_ = body;
+        this->rigid_body_->x = {this->magnet_active_->getPosition().x, this->magnet_active_->getPosition().y, 0};
+        this->rigid_body_->mass = this->level_ * this->strength_;
+    }
 }
 
 void Magnet::updateRotation()
@@ -136,6 +149,7 @@ void Magnet::move(sf::Vector2f mov)
     this->levels_[2]->move(mov);
 
     if (force_source_ != nullptr) force_source_->x_ = this->magnet_active_->getPosition();
+    if (rigid_body_ != nullptr) rigid_body_->x = {this->magnet_active_->getPosition().x, this->magnet_active_->getPosition().y, 0};
 }
 
 void Magnet::draw(sf::RenderWindow& window)

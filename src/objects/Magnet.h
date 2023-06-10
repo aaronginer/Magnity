@@ -2,6 +2,7 @@
 #include "SpriteObject.h"
 #include "../ParticleDynamics.h"
 #include "../gameplay/MagnetArea.h"
+#include "../RigidBody.h"
 using namespace sf;
 
 #ifndef MAGNITY_MAGNET_H
@@ -21,9 +22,10 @@ public:
     GameObject* follow_object_ = nullptr;
     int player_;
     int level_ = 1;
+    int strength_;
     MagnetKeySet key_set_;
 
-    Magnet(MagnetKeySet key_set, sf::Vector2f position, int player, sf::Vector2f scale={0.1f, 0.1f});
+    Magnet(MagnetKeySet key_set, sf::Vector2f position, int player, int strength, sf::Vector2f scale={0.1f, 0.1f});
     ~Magnet();
 
     std::vector<sf::Texture*> textures_;
@@ -32,13 +34,14 @@ public:
     SpriteObject* magnet_active_ = nullptr;
     SpriteObject* levels_[3];
     ForceSource* force_source_ = nullptr;
+    RigidBody* rigid_body_ = nullptr;
 
     void handlePolledKeyInput(sf::Event keyEvent);
     void handleInstantKeyInput(float delta_time, MagnetArea* ma);
 
     void toggleLevel();
     void setFollowObject(GameObject* follow_object);
-    void setForceSource(ForceSource* force_source_);
+    void setForceSource(ForceSource* force_source_, RigidBody* body);
     void updateRotation();
     void move(sf::Vector2f mov);
     void draw(sf::RenderWindow& window);

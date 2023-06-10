@@ -3,7 +3,7 @@
 #include <SFML/Audio.hpp>
 
 #include "PathInterpol.h"
-// #include "RigidBody.h"
+#include "RigidBody.h"
 #include "ParticleDynamics.h"
 #include "objects/Magnet.h"
 #include "gameplay/MagnetArea.h"
@@ -17,7 +17,7 @@ class Level {
     public:
         std::vector<Spline*> splines_;
         std::vector<ParticleDynamics*> particle_dynamics_;
-        // std::vector<RigidBody*> rigid_bodies_;
+        std::vector<RigidBody*> rigid_bodies_;
 
         std::vector<sf::Texture*> loaded_textures_;
         std::vector<Magnet*> magnets_;
@@ -26,7 +26,7 @@ class Level {
         
         std::vector<SpriteObject*> game_objects_;
 
-        SpriteObject* object_ = nullptr;
+        GameObject* object_ = nullptr;
         SpriteObject* target_area_ = nullptr;
 
         ForceSource* mouse_force = nullptr;
@@ -66,6 +66,8 @@ class Level {
         static Level* LoadLevel4(sf::RenderWindow& window, tgui::GuiSFML& gui);
         static Level* LoadLevelParticleDemo(sf::RenderWindow& window, tgui::GuiSFML& gui);
         static Level* LoadLevelPathInterpolDemo(sf::RenderWindow& window, tgui::GuiSFML& gui);
+        static Level* LoadLevelRigidBodyDemo(sf::RenderWindow& window, tgui::GuiSFML& gui);
+        static Level* LoadLevelVoronoiDemo(sf::RenderWindow& window, tgui::GuiSFML& gui);
 };
 
 

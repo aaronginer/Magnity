@@ -1,0 +1,4 @@
+warea_bouncy 1 1 30 798
+warea_bouncy 1 1 1198 30
+warea_bouncy 1169 1 30 798
+warea_bouncy 1 769 1198 30

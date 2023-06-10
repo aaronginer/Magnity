@@ -11,6 +11,8 @@ public:
     float rotation_;
     bool active_ = true;
 
+    GameObject() {}
+
     GameObject(sf::Vector2f position, float rotation=0)
     {
         this->position_ = position;

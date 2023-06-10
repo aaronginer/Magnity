@@ -29,11 +29,18 @@ void WallArea::load(std::string file_path)
         int space_index = line.find(' ');
         std::string type = line.substr(0, space_index);
         std::string rest = line.substr(space_index+1, line.length()-(space_index+1));
+        // TODO: IF SOMETHING CRASHES
+        sf::Texture t;
         if (strcmp(type.c_str(), "warea_fixed") == 0)
         {
             float px, py, sx, sy;
             int floats_parsed = sscanf(rest.c_str(), "%f %f %f %f", &px, &py, &sx, &sy);
             
+            RigidBody* wall_body = new RigidBody(10, 2.5, 3, sx, sy, t, false,
+                                        px + sx/2, py + sy/2, RigidBody::rigid_bodies->size());
+            wall_body->visible = false;
+            RigidBody::rigid_bodies->push_back(wall_body);
+
             sf::RectangleShape r({sx, sy});
             r.setPosition(px, py);
             r.setPosition(px, py);
@@ -48,6 +55,11 @@ void WallArea::load(std::string file_path)
             float px, py, sx, sy;
             int floats_parsed = sscanf(rest.c_str(), "%f %f %f %f", &px, &py, &sx, &sy);
             
+            RigidBody* wall_body = new RigidBody(10, 2.5, 2, sx, sy, t, false,
+                                        px + sx/2, py + sy/2, RigidBody::rigid_bodies->size());
+            wall_body->visible = false;
+            RigidBody::rigid_bodies->push_back(wall_body);
+
             sf::RectangleShape r({sx, sy});
             r.setPosition(px, py);
             r.setPosition(px, py);
