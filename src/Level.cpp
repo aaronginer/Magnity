@@ -3,6 +3,7 @@
 #include "cmath"
 #include "background/SpriteSpawner.h"
 #include "mutex"
+#include "VoronoiFracture.h"
 
 #define WIDTH 1200
 #define HEIGTH 800
@@ -966,6 +967,7 @@ Level* Level::LoadLevelVoronoiDemo(sf::RenderWindow& window, tgui::GuiSFML& gui)
 Level* Level::LoadLevel(sf::RenderWindow& window, tgui::GuiSFML& gui, Level* (*levelToLoad)(sf::RenderWindow& window, tgui::GuiSFML& gui))
 {
     level_lock.lock();
+    VoronoiFracture::show_cells = false;
 
     Level* c = current_level;
     c->destroy(window);
