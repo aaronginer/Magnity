@@ -14,6 +14,7 @@ VoronoiFracture::VoronoiFracture(RigidBody* rigidBody, sf::Vector3<double> colli
     sf::Image image;
     image.create(rigidBody->body.getSize().x, rigidBody->body.getSize().y, sf::Color::Transparent);
     image = rigidBody->body.getTexture()->copyToImage(); // Set image to the image of the original object
+    this->vornoi_image = image;
 
     sf::Image imgFracture;
     imgFracture.create(image.getSize().x, image.getSize().y, sf::Color::Transparent);
@@ -21,6 +22,14 @@ VoronoiFracture::VoronoiFracture(RigidBody* rigidBody, sf::Vector3<double> colli
     for(int i = 0; i < this->vPoints.size(); i++) {
         this->rigidBodesImages.push_back(imgFracture);
     }
+
+    //fill colours
+    this->colors.push_back(sf::Color::Red);
+    this->colors.push_back(sf::Color::Blue);
+    this->colors.push_back(sf::Color::Green);
+    this->colors.push_back(sf::Color::Cyan);
+    this->colors.push_back(sf::Color::Magenta);
+    this->colors.push_back(sf::Color::Yellow);
 }
 
 void VoronoiFracture::computeVoronoiPoints(sf::Vector3<double> entryPoint) {
@@ -155,93 +164,6 @@ double VoronoiFracture::isInsideOutside(sf::Vector3<double> vPa, sf::Vector3<dou
     }
 }
 
-void VoronoiFracture::computeDistanceField(std::vector<RigidBody*> *rigid_bodies) {
-    //compute the kd using the nanoflann library
-    // Define the KD tree adaptor using the vector of points
-    //https://github.com/gevago01/nanoflann-kdtree-example/blob/master/main.cpp
-    //using the KDTreeVectorOfVectorsAdapter.h https://github.com/jlblancoc/nanoflann/blob/master/examples/KDTreeVectorOfVectorsAdaptor.h
-    typedef KDTreeVectorOfVectorsAdaptor<std::vector<std::vector<double> >, double> my_kd_tree_t;
-    my_kd_tree_t mat_index(2, this->voronoiPoints);
-    mat_index.index->buildIndex();
-
-    //compute distance field and assign for each point in the sprite,
-    //the closest voronoi point
-    for(int i = 0; i < rigidBody->body.getTexture()->getSize().x; i++) {
-        for(int y = 0; y < rigidBody->body.getTexture()->getSize().y; y++) {
-            // Search for the closest point
-            size_t closestIndex;
-            double closestDistance;
-            std::vector<double> sprite_ptn = {(double)i, (double)y};
-            //If num_clostest = 2 - do i get two indices?
-            mat_index.index->knnSearch(&sprite_ptn[0], 1, &closestIndex, &closestDistance);
-            std::pair<int, int> point = {i, y};
-            distanceField.insert({point, closestIndex});
-        }
-    }
-
-    //fill in distanceFieldOrdered
-    for(auto point : distanceField) {
-        if(distanceFieldOrdered.find(point.second) != distanceFieldOrdered.end()) {
-            distanceFieldOrdered.at(point.second).push_back(point.first);
-        } else {
-            std::vector<std::pair<int,int>> vec;
-            vec.push_back(point.first);
-            distanceFieldOrdered.insert({point.second, vec});
-        }
-    }
-
-    //loop through created segments
-    //create new background images
-    //create new rigid bodies - give them same velocity as broken rigid body
-    //delete broken rigid body
-    int idx = 0;
-    for(auto voronoiPtn : distanceFieldOrdered) {
-        //create new Texture for this new rigid body for voronoi point
-        sf::Image image;
-        image.create(rigidBody->body.getSize().x, rigidBody->body.getSize().y, sf::Color::Transparent);
-        image = rigidBody->body.getTexture()->copyToImage(); //set image to image of original object
-
-        sf::Image image_fracture;
-        image_fracture.create(image.getSize().x, image.getSize().y, sf::Color::Transparent);
-
-        for(int j = 0; j < voronoiPtn.second.size(); j++) {
-            image_fracture.setPixel(voronoiPtn.second.at(j).first, voronoiPtn.second.at(j).second,
-                                    image.getPixel(voronoiPtn.second.at(j).first, voronoiPtn.second.at(j).second));
-        }
-
-        std::string name = "img";
-        name = name + std::to_string(idx);
-        name = name + ".png";
-        image_fracture.saveToFile(name);
-
-        idx++;
-
-            //create new rigid body with new image as texture
-        sf::Texture fracture_texture;
-        fracture_texture.loadFromFile(name);
-        fracture_texture.loadFromImage(image_fracture);
-        //TODO: idk if this gets me the x and y values correctly
-        //std::vector<double> xPoint;
-        sf::Vector3<double> diff = rigidBody->x - sf::Vector3<double>(10, 10, 0);
-        RigidBody* fracture = new RigidBody(rigidBody->mass / 6, 2.5, 0, 50.0, 50.0, fracture_texture, false,
-                                            mat_index.m_data.at(voronoiPtn.first)[0] + diff.x, mat_index.m_data.at(voronoiPtn.first)[1] + diff.y,
-                                            rigid_bodies->size() + insertedBodies.size());
-        fracture->v = rigidBody->v;
-        fracture->P = rigidBody->P;
-        fracture->w = rigidBody->w;
-        fracture->L = rigidBody->L;
-        fracture->torque_vec = rigidBody->torque_vec;
-        fracture->force = rigidBody->force;
-        fracture->splitter = true;
-        fracture->nameImg = name;
-        insertedBodies.push_back(fracture);
-    }
-}
-
-std::vector<RigidBody *> VoronoiFracture::getInsertedBodiesVec() {
-    return this->insertedBodies;
-}
-
 std::pair<sf::Vector3<double>, sf::Vector3<double>> VoronoiFracture::getTwoClosestPoints(sf::Vector3<double> point) {
     sf::Vector3<double> point1;
     sf::Vector3<double> point2;
@@ -279,6 +201,9 @@ void VoronoiFracture::calcualteVoronoiFracture(std::vector<RigidBody*> *inserted
             std::pair<sf::Vector3 < double>,
                     sf::Vector3 < double >> closestPoints = getTwoClosestPoints(sf::Vector3<double>(i, j, 0));
             float noise = fbm(sf::Vector3<double>(i, j, 0));
+            if(!this->use_noise) {
+                noise = 1.0f;
+            }
             double d = isInsideOutside(closestPoints.first, closestPoints.second, sf::Vector3<double>(i * noise, j * noise, 0));
 
             int idxClosestPtn = vPointsIDX.at(std::pair<int, int>(closestPoints.first.x, closestPoints.first.y));
@@ -288,12 +213,16 @@ void VoronoiFracture::calcualteVoronoiFracture(std::vector<RigidBody*> *inserted
                 if(c.a != NULL) {
                     this->rigidBodesImages.at(idxClosestPtn).setPixel(i, j, c);
                 }
+                if(i == closestPoints.first.x && j == closestPoints.first.y) {
+                    this->vornoi_image.setPixel(i, j, sf::Color::Black);
+                }
+                else {
+                    this->vornoi_image.setPixel(i, j, this->colors.at(idxClosestPtn));
+                }
             }
         }
     }
 
-    //TODO: put noise over image
-    //TODO: use this picture to show voronoi
     //std::string filename = "img.png"; // Set the desired file name
     //rigidBody->body.getTexture()->copyToImage().saveToFile(filename);
 
@@ -371,5 +300,11 @@ float VoronoiFracture::fbm (sf::Vector3<double> st) {
     }
 
     return value;
+}
+
+void VoronoiFracture::showVornoiCells() {
+    Texture* texture = new Texture();
+    texture->loadFromImage(this->vornoi_image);
+    this->rigidBody->body.setTexture(texture);
 }
 

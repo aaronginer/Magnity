@@ -26,7 +26,7 @@ class RigidBody {
 
         static double calcMagnitude(sf::Vector3<double> vec);
         static sf::Vector3<double> calcCrossProd(sf::Vector3<double> vec1, sf::Vector3<double> vec2);
-        static void ComputeForceAndTorque(RigidBody *rb);
+        static void ComputeForceAndTorque(RigidBody *rb, std::vector<RigidBody*> *rigid_bodies);
         Matrix calcIbody() const;
         static void DisplayBodies(sf::RenderWindow &window, std::vector<RigidBody*> *rigid_bodies);
         static void ode(std::vector<RigidBody*> *y0, std::vector<RigidBody> *yEnd,  double t0,
@@ -34,9 +34,12 @@ class RigidBody {
                                            std::vector<RigidBody*> *insertedBodies);
         sf::Vector3<double> normalizeVector(sf::Vector3<double> vec);
         void checkForCollisions(std::vector<RigidBody*>* rigid_bodies, std::vector<RigidBody*> *insertedBodies);
-        static void applyVelocityVerletIntegration(RigidBody* rigid_body0, RigidBody* rigid_body1, double timestep);
+        static void applyVelocityVerletIntegration(RigidBody* rigid_body0, RigidBody* rigid_body1, double timestep, std::vector<RigidBody*> *rigid_bodies);
         void applyCollision(RigidBody* rigidBody1, RigidBody* rigidBody2, sf::Vector3<double> collision_point);
         static void updateRigidBodies(std::vector<RigidBody*> *rigidbodies, float total_time, float delta_time);
+        static void drawVelocityArrows(sf::RenderWindow& window, std::vector<RigidBody*> *rigid_bodies);
+        void drawArrow(sf::RenderWindow& window, sf::Texture& tex, sf::Vector2f position, sf::Vector2f P);
+        void drawAngularMomentum(sf::RenderWindow& window, sf::Vector2f position, double P);
 
         //state variables
         bool fixed;
@@ -67,6 +70,8 @@ class RigidBody {
         bool visible = true;
         bool contact_border = false;
         sf::Sprite momentum_vector;
+        bool force_already_applied = false;
+        bool draw_vA = false;
 
     ////spatial variables
         //Center of mass at (0,0,0)

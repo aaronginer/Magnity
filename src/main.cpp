@@ -44,6 +44,8 @@ bool gui_visible = true;
 
 RigidBody* ball_ptr;
 
+bool draw_vectors_ = false;
+
 //Rigid Body Vector
 std::vector<RigidBody*> *rigid_bodies = new std::vector<RigidBody*>;
 //Borders / Fixed obstacles
@@ -162,8 +164,8 @@ void createPathInterpolationPanel(tgui::Panel::Ptr panel, sf::RenderWindow& wind
     tgui::Button::Ptr showVelocityButton = tgui::Button::create();
     drawControlsButton->setText("Show Momentum and Velocity vectors");
     drawControlsButton->setSize(400, 30);
-    drawControlsButton->setPosition(10, 140);
-    drawControlsButton->onPress.connect([&]() { s.draw_vectors_ = !s.draw_vectors_; });
+    drawControlsButton->setPosition(10, 260);
+    drawControlsButton->onPress.connect([&]() { draw_vectors_ = !draw_vectors_; });
 
     panel->add(drawControlsButton);
 
@@ -214,6 +216,9 @@ void animation_update(float deltaTime) {
     // printf("time_delta: %f\n", delta_time.count()/1000.f);
     s.interpolate(deltaTime);
     RigidBody::updateRigidBodies(rigid_bodies, total_time, deltaTime);
+    if(draw_vectors_)  {
+        RigidBody::drawVelocityArrows(*mainWindow, rigid_bodies);
+    }
 }
 
 int main()
@@ -267,12 +272,17 @@ int main()
     Object object(&objectTexture);
 
     RigidBody* border1 = new RigidBody(10.0, 2.5, 2, player1_area.getArea().getSize().x, 10.0f,
-                         borderTexture, true, 0.0f, player1_area.getArea().getSize().y, rigid_bodies->size());
+                         borderTexture, true, 0.0f + (player1_area.getArea().getSize().x / 2), player1_area.getArea().getSize().y + 5.0f, rigid_bodies->size());
     rigid_bodies->push_back(border1);
 
+    std::cout << "Position border 1  (" << border1->x.x << ", " << border1->x.y << ")" << std::endl;
+
     RigidBody* border2 = new RigidBody(10.0, 2.5, 2, player1_area.getArea().getSize().x, 10.0f,
-                                      borderTexture, true, 0.0f, view.getSize().y - player2_area.getArea().getSize().y, rigid_bodies->size());
+                                      borderTexture, true, 0.0f + (player2_area.getArea().getSize().x / 2), view.getSize().y - player2_area.getArea().getSize().y - 5.0f, rigid_bodies->size());
     rigid_bodies->push_back(border2);
+
+    std::cout << "Position border 2  (" << border2->x.x << ", " << border2->x.y << ")" << std::endl;
+    std::cout << "view - playerare2 = " << view.getSize().y - player2_area.getArea().getSize().y << std::endl;
 
     for(int i = 0; i < 1; i++) {
         RigidBody* ball = new RigidBody(1.0, 2.5, 0, 30.0, 30.0, objectTexture, false,

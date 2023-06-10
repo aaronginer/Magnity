@@ -11,9 +11,7 @@ class VoronoiFracture {
 public:
     VoronoiFracture(RigidBody* rigidBody, sf::Vector3<double> collisionPoint);
     void computeVoronoiPoints(sf::Vector3<double> entryPoint);
-    void computeDistanceField(std::vector<RigidBody*> *rigid_bodies);
     double isInsideOutside(sf::Vector3<double> vPa, sf::Vector3<double> vPb, sf::Vector3<double> voxel);
-    std::vector<RigidBody*> getInsertedBodiesVec();
     std::vector<std::vector<double>> voronoiPoints;
     std::vector<sf::Vector3<double>> vPoints;
     std::map<std::pair<int, int>, size_t> distanceField;
@@ -26,8 +24,12 @@ public:
     std::vector<sf::Image> rigidBodesImages;
     std::vector<sf::Texture> textures;
     void calcualteVoronoiFracture(std::vector<RigidBody*> *insertedBodies);
+    void showVornoiCells();
     float noise(sf::Vector3<double> st);
     float fbm (sf::Vector3<double> st);
+    std::vector<sf::Color> colors;
+    sf::Image vornoi_image;
+    bool use_noise = false;
 
 private:
 

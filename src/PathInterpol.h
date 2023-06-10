@@ -47,7 +47,6 @@ class Spline
 
         bool draw_curve_ = false;
         bool draw_ctrl_and_arc_ = false;
-        bool draw_vectors_ = false;
 
         int easing_option_ = 0;
 
