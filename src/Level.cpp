@@ -916,7 +916,7 @@ Level* Level::LoadLevelRigidBodyDemo(sf::RenderWindow& window, tgui::GuiSFML& gu
     l->loaded_textures_.push_back(object_texture);
     l->wall_area_ = wa;
 
-    l->background_color_ = sf::Color::Black;
+    l->background_color_ = sf::Color::White;
 
     window.setView(view);
     return l;

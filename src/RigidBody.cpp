@@ -101,7 +101,6 @@ void RigidBody::ComputeForceAndTorque(RigidBody *rb, std::vector<RigidBody*> *ri
                 // Apply gravitational force to rb and body
                 rb->force = {rb->force.x + gravitationalForce.x, rb->force.y + gravitationalForce.y, 0.0};
                 //std::cout << "Force in loop   (" << rb->force.x << ", " << rb->force.y << ")" << std::endl;
-                assert(forceMagnitude <= 1000000000);
             }
         }
 

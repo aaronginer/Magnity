@@ -4,7 +4,6 @@
 
 #include "RigidBody.h"
 #include <cstdlib>
-#include <nanoflann.hpp>
 
 class VoronoiFracture {
 public:
