@@ -231,14 +231,18 @@ void VoronoiFracture::calcualteVoronoiFracture(std::vector<RigidBody*> *inserted
     //rigidBody->body.getTexture()->copyToImage().saveToFile(filename);
 
     int i = 0;
-    sf::Vector3<double> diff = rigidBody->x - sf::Vector3<double>(10, 10, 0);
+    sf::Vector3<double> diff = rigidBody->x - sf::Vector3<double>(rigidBody->radius, rigidBody->radius, 0);
+
+    sf::Vector3<double> center = {rigidBody->width / 2, rigidBody->height / 2, 0};
 
     for(auto point : vPoints) {
+        sf::Vector3<double> d = point - center;
+
         sf::Texture* texture = new sf::Texture();
         int idxPtn = vPointsIDX.at(std::pair<int, int>(point.x, point.y));
         texture->loadFromImage(rigidBodesImages.at(idxPtn));
         RigidBody* fracture = new RigidBody(0.001f, 2.5, 0, rigidBody->width, rigidBody->height, *texture, false,
-                                            point.x + diff.x, point.y + diff.y, insertedBodies->size());
+                                            rigidBody->x.x + d.x/2, rigidBody->x.y + d.y/2, insertedBodies->size());
 
         //https://stackoverflow.com/questions/7560114/random-number-c-in-some-range
         //std::random_device rdX; // obtain a random number from hardware
@@ -265,6 +269,8 @@ void VoronoiFracture::calcualteVoronoiFracture(std::vector<RigidBody*> *inserted
         m->follow_object_ = nullptr;
     }
 
+    rigidBody->visible = false;
+    rigidBody->disabled = true;
     // auto ptr = *iter;
     // delete ptr;
     // RigidBody::rigid_bodies->erase(iter);

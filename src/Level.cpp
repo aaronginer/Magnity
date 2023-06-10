@@ -929,17 +929,17 @@ Level* Level::LoadLevelVoronoiDemo(sf::RenderWindow& window, tgui::GuiSFML& gui)
 
     // Textures
     sf::Texture* object_texture = new sf::Texture();
-    object_texture->loadFromFile("res/object.png");
+    object_texture->loadFromFile("res/butterfly.png");
 
     // Splines
     
     // ParticleDynamics
 
     // RigidBodies
-    for (int i = 0; i < 37; i++)
+    for (int i = 0; i < 2; i++)
     {
-        RigidBody* object = new RigidBody(0.001f, 2.5, 0, 30.0, 30.0, *object_texture, false,
-                                        50 + (i * 30), 60, RigidBody::rigid_bodies->size());
+        RigidBody* object = new RigidBody(0.001f, 2.5, 0, 200.0, 200.0, *object_texture, false,
+                                        300 + (i * 600), 300, RigidBody::rigid_bodies->size());
         RigidBody::rigid_bodies->push_back(object);
     }
 
@@ -955,8 +955,7 @@ Level* Level::LoadLevelVoronoiDemo(sf::RenderWindow& window, tgui::GuiSFML& gui)
     Level* l = new Level("VFDemo");
     l->loaded_textures_.push_back(object_texture);
     l->wall_area_ = wa;
-
-    l->background_color_ = sf::Color::Black;
+    l->background_color_ = sf::Color::White;
 
     window.setView(view);
     return l;
